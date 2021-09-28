@@ -4,21 +4,20 @@ version: 1.0.0
 homepage: https://github.com/tjcampanella/story_creator
 
 environment:
-  sdk: '>=2.12.0 <3.0.0'
+  sdk: ">=2.14.0 <3.0.0"
+
 dependencies:
   flutter:
     sdk: flutter
 
-  path_provider: ^2.0.2
-  flutter_colorpicker: ^0.5.0
+  path_provider: ^2.0.5
+  flutter_colorpicker: ^0.6.0
   google_fonts: ^2.1.0
-
-
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  flutter_lints:
+  flutter_lints: ^1.0.4
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
 
