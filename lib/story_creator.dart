@@ -15,10 +15,10 @@ import 'dart:ui' as ui;
 class StoryCreator extends StatefulWidget {
   StoryCreator({
     Key? key,
-    required this.filePath,
+    this.filePath,
   }) : super(key: key);
 
-  final String filePath;
+  final String? filePath;
 
   @override
   _StoryCreatorState createState() => _StoryCreatorState();
@@ -82,12 +82,19 @@ class _StoryCreatorState extends State<StoryCreator> {
 
   @override
   void initState() {
-    stackData.add(EditableItem()
-      ..type = ItemType.Image
-      ..value = widget.filePath
-      ..position = Offset(0.0, 0.0));
-
     super.initState();
+
+    stackData.add(EditableItem()
+      ..type = ItemType.Color
+      ..color = Theme.of(context).colorScheme.secondary);
+
+    if (widget.filePath != null)
+      stackData.add(
+        EditableItem()
+          ..type = ItemType.Image
+          ..value = widget.filePath
+          ..position = Offset(0.0, 0.0),
+      );
   }
 
   @override
@@ -143,16 +150,7 @@ class _StoryCreatorState extends State<StoryCreator> {
               child: Stack(
                 children: [
                   Container(color: Colors.black54),
-                  // Visibility(
-                  //   visible: stackData[0].type == ItemType.Image,
-                  //   child: Center(
-                  //     child: Image.file(
-                  //       File(stackData[0].value!),
-                  //       fit: BoxFit.cover,
-                  //     ),
-                  //   ),
-                  // ),
-                  ...stackData.map(_buildItemWidget).toList(),
+                  ...stackData.map(_buildItemWidget),
                   Visibility(
                     visible: isTextInput,
                     child: Container(
@@ -240,96 +238,95 @@ class _StoryCreatorState extends State<StoryCreator> {
                             ),
                           ),
                           Positioned(
-                              top: 40,
-                              child: Container(
-                                width: screen.width,
-                                padding: const EdgeInsets.all(8.0),
-                                child: Row(
-                                  crossAxisAlignment: CrossAxisAlignment.center,
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    IconButton(
-                                      icon: Icon(Icons.color_lens_outlined,
-                                          color: Colors.white),
-                                      onPressed: () {
-                                        // raise the [showDialog] widget
-                                        showDialog(
-                                          context: context,
-                                          builder: (ctx) {
-                                            return AlertDialog(
-                                              title:
-                                                  const Text('Pick a color!'),
-                                              content: SingleChildScrollView(
-                                                child: ColorPicker(
-                                                  pickerColor: pickerColor,
-                                                  onColorChanged: (color) {
-                                                    setState(() {
-                                                      pickerColor = color;
-                                                    });
-                                                  },
-                                                  showLabel: true,
-                                                  pickerAreaHeightPercent: 0.8,
-                                                ),
+                            top: 40,
+                            child: Container(
+                              width: screen.width,
+                              padding: const EdgeInsets.all(8.0),
+                              child: Row(
+                                crossAxisAlignment: CrossAxisAlignment.center,
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  IconButton(
+                                    icon: Icon(Icons.color_lens_outlined,
+                                        color: Colors.white),
+                                    onPressed: () {
+                                      // raise the [showDialog] widget
+                                      showDialog(
+                                        context: context,
+                                        builder: (ctx) {
+                                          return AlertDialog(
+                                            title: const Text('Pick a color!'),
+                                            content: SingleChildScrollView(
+                                              child: ColorPicker(
+                                                pickerColor: pickerColor,
+                                                onColorChanged: (color) {
+                                                  setState(() {
+                                                    pickerColor = color;
+                                                  });
+                                                },
+                                                showLabel: true,
+                                                pickerAreaHeightPercent: 0.8,
                                               ),
-                                              actions: <Widget>[
-                                                TextButton(
-                                                  child: const Text('Got it'),
-                                                  onPressed: () {
-                                                    setState(() {
-                                                      currentColor =
-                                                          pickerColor;
-                                                    });
-                                                    Navigator.of(ctx).pop();
-                                                  },
-                                                ),
-                                              ],
-                                            );
-                                          },
-                                        );
-                                      },
+                                            ),
+                                            actions: <Widget>[
+                                              TextButton(
+                                                child: const Text('Got it'),
+                                                onPressed: () {
+                                                  setState(() {
+                                                    currentColor = pickerColor;
+                                                  });
+                                                  Navigator.of(ctx).pop();
+                                                },
+                                              ),
+                                            ],
+                                          );
+                                        },
+                                      );
+                                    },
+                                  ),
+                                  IconButton(
+                                    icon: Container(
+                                      padding: currentTextStyle != 0
+                                          ? EdgeInsets.only(
+                                              left: 7,
+                                              right: 7,
+                                              top: 5,
+                                              bottom: 5,
+                                            )
+                                          : EdgeInsets.all(0),
+                                      decoration: currentTextStyle != 0
+                                          ? BoxDecoration(
+                                              color: currentTextStyle == 1
+                                                  ? Colors.black
+                                                      .withOpacity(1.0)
+                                                  : Colors.white
+                                                      .withOpacity(1.0),
+                                              borderRadius: BorderRadius.all(
+                                                Radius.circular(4),
+                                              ),
+                                            )
+                                          : BoxDecoration(),
+                                      child: Icon(Icons.auto_awesome,
+                                          color: currentTextStyle != 2
+                                              ? Colors.white
+                                              : Colors.black),
                                     ),
-                                    IconButton(
-                                      icon: Container(
-                                        padding: currentTextStyle != 0
-                                            ? EdgeInsets.only(
-                                                left: 7,
-                                                right: 7,
-                                                top: 5,
-                                                bottom: 5,
-                                              )
-                                            : EdgeInsets.all(0),
-                                        decoration: currentTextStyle != 0
-                                            ? BoxDecoration(
-                                                color: currentTextStyle == 1
-                                                    ? Colors.black
-                                                        .withOpacity(1.0)
-                                                    : Colors.white
-                                                        .withOpacity(1.0),
-                                                borderRadius: BorderRadius.all(
-                                                  Radius.circular(4),
-                                                ),
-                                              )
-                                            : BoxDecoration(),
-                                        child: Icon(Icons.auto_awesome,
-                                            color: currentTextStyle != 2
-                                                ? Colors.white
-                                                : Colors.black),
-                                      ),
-                                      onPressed: () {
-                                        if (currentTextStyle < 2) {
-                                          setState(() {
-                                            currentTextStyle++;
-                                          });
-                                        } else {
-                                          setState(() {
-                                            currentTextStyle = 0;
-                                          });
-                                        }
-                                      },
-                                    ),
-                                  ],
-                                ),
-                              )),
+                                    onPressed: () {
+                                      if (currentTextStyle < 2) {
+                                        setState(() {
+                                          currentTextStyle++;
+                                        });
+                                      } else {
+                                        setState(() {
+                                          currentTextStyle = 0;
+                                        });
+                                      }
+                                    },
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
                           Positioned(
                             top: screen.height / 2 - 45,
                             left: -120,
@@ -341,17 +338,17 @@ class _StoryCreatorState extends State<StoryCreator> {
                               child: SizedBox(
                                 width: 300,
                                 child: Slider(
-                                    value: currentFontSize,
-                                    min: 14,
-                                    max: 74,
-                                    activeColor: Colors.white,
-                                    inactiveColor:
-                                        Colors.white.withOpacity(0.4),
-                                    onChanged: (input) {
-                                      setState(() {
-                                        currentFontSize = input;
-                                      });
-                                    }),
+                                  value: currentFontSize,
+                                  min: 14,
+                                  max: 74,
+                                  activeColor: Colors.white,
+                                  inactiveColor: Colors.white.withOpacity(0.4),
+                                  onChanged: (input) {
+                                    setState(() {
+                                      currentFontSize = input;
+                                    });
+                                  },
+                                ),
                               ),
                             ),
                           ),
@@ -414,58 +411,59 @@ class _StoryCreatorState extends State<StoryCreator> {
               child: Visibility(
                 visible: _activeItem == null,
                 child: Positioned(
-                    top: 50,
-                    right: 20,
-                    child: TextButton(
-                      onPressed: () async {
-                        //done: save image and return captured image to previous screen
+                  top: 50,
+                  right: 20,
+                  child: TextButton(
+                    onPressed: () async {
+                      //done: save image and return captured image to previous screen
 
-                        RenderRepaintBoundary boundary =
-                            previewContainer.currentContext!.findRenderObject()
-                                as RenderRepaintBoundary;
-                        ui.Image image = await boundary.toImage(
-                          pixelRatio: 2.0,
-                        );
-                        final directory = (await getTemporaryDirectory()).path;
-                        ByteData? byteData = await image.toByteData(
-                          format: ui.ImageByteFormat.png,
-                        );
-                        Uint8List pngBytes = byteData!.buffer.asUint8List();
-                        // print(pngBytes);
+                      RenderRepaintBoundary boundary =
+                          previewContainer.currentContext!.findRenderObject()
+                              as RenderRepaintBoundary;
+                      ui.Image image = await boundary.toImage(
+                        pixelRatio: 2.0,
+                      );
+                      final directory = (await getTemporaryDirectory()).path;
+                      ByteData? byteData = await image.toByteData(
+                        format: ui.ImageByteFormat.png,
+                      );
+                      Uint8List pngBytes = byteData!.buffer.asUint8List();
+                      // print(pngBytes);
 
-                        File imgFile = File(
-                            '$directory/' + DateTime.now().toString() + '.png');
-                        imgFile.writeAsBytes(pngBytes).then((value) {
-                          // done: return imgFile
-                          Navigator.of(context).pop(imgFile);
-                        });
-                      },
-                      style: ButtonStyle(
-                        shape: MaterialStateProperty.all(
-                          RoundedRectangleBorder(
-                            borderRadius: BorderRadius.all(
-                              Radius.circular(10),
-                            ),
+                      File imgFile = File(
+                          '$directory/' + DateTime.now().toString() + '.png');
+                      imgFile.writeAsBytes(pngBytes).then((value) {
+                        // done: return imgFile
+                        Navigator.of(context).pop(imgFile);
+                      });
+                    },
+                    style: ButtonStyle(
+                      shape: MaterialStateProperty.all(
+                        RoundedRectangleBorder(
+                          borderRadius: BorderRadius.all(
+                            Radius.circular(10),
                           ),
                         ),
-                        backgroundColor: MaterialStateProperty.all(
-                          Colors.black.withOpacity(0.7),
-                        ),
                       ),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Text(
-                            'Done',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 18,
-                            ),
+                      backgroundColor: MaterialStateProperty.all(
+                        Colors.black.withOpacity(0.7),
+                      ),
+                    ),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          'Done',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 18,
                           ),
-                        ],
-                      ),
-                    )),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
               ),
             ),
             Visibility(
@@ -505,10 +503,8 @@ class _StoryCreatorState extends State<StoryCreator> {
 
   Widget _buildItemWidget(EditableItem e) {
     final screen = MediaQuery.of(context).size;
-    // double centerHeightPosition = screen.height/2;
-    // double centerWidthPosition = screen.width/2;
 
-    var widget;
+    late final Widget widget;
     switch (e.type) {
       case ItemType.Text:
         if (e.textStyle == 0) {
@@ -575,139 +571,144 @@ class _StoryCreatorState extends State<StoryCreator> {
         break;
       case null:
         break;
+      case ItemType.Color:
+        widget = Positioned.fill(
+          child: Container(color: e.color),
+        );
+        break;
     }
 
-    // e.position = Offset(centerHeightPosition, centerWidthPosition);
+    if (e.type == ItemType.Text) {
+      return Positioned(
+        top: e.position.dy * screen.height,
+        left: e.position.dx * screen.width,
+        child: Transform.scale(
+          scale: e.scale,
+          child: Transform.rotate(
+            angle: e.rotation,
+            child: Listener(
+              onPointerDown: (details) {
+                // if (e.type != ItemType.Image) {
+                if (_inAction) return;
+                _inAction = true;
+                _activeItem = e;
+                _initPos = details.position;
+                _currentPos = e.position;
+                _currentScale = e.scale;
+                _currentRotation = e.rotation;
+                // }
+              },
+              onPointerUp: (details) {
+                _inAction = false;
+                // print("e.position.dy: " + e.position.dy.toString());
+                // print("e.position.dx: " + e.position.dx.toString());
+                if (e.position.dy >= 0.8 &&
+                    e.position.dx >= 0.0 &&
+                    e.position.dx <= 1.0) {
+                  // print('Delete the Item');
 
-    return e.type == ItemType.Text
-        ? Positioned(
-            top: e.position.dy * screen.height,
-            left: e.position.dx * screen.width,
-            child: Transform.scale(
-              scale: e.scale,
-              child: Transform.rotate(
-                angle: e.rotation,
-                child: Listener(
-                  onPointerDown: (details) {
-                    // if (e.type != ItemType.Image) {
-                    if (_inAction) return;
-                    _inAction = true;
-                    _activeItem = e;
-                    _initPos = details.position;
-                    _currentPos = e.position;
-                    _currentScale = e.scale;
-                    _currentRotation = e.rotation;
-                    // }
-                  },
-                  onPointerUp: (details) {
-                    _inAction = false;
-                    // print("e.position.dy: " + e.position.dy.toString());
-                    // print("e.position.dx: " + e.position.dx.toString());
-                    if (e.position.dy >= 0.8 &&
-                        e.position.dx >= 0.0 &&
-                        e.position.dx <= 1.0) {
-                      // print('Delete the Item');
+                  setState(() {
+                    stackData.removeAt(stackData.indexOf(e));
+                    _activeItem = null;
+                  });
+                }
 
-                      setState(() {
-                        stackData.removeAt(stackData.indexOf(e));
-                        _activeItem = null;
-                      });
-                    }
+                setState(() {
+                  _activeItem = null;
+                });
+              },
+              onPointerCancel: (details) {},
+              onPointerMove: (details) {
+                //print("e.position.dy: " + e.position.dy.toString());
+                // print("e.position.dx: " + e.position.dx.toString());
+                if (e.position.dy >= 0.8 &&
+                    e.position.dx >= 0.0 &&
+                    e.position.dx <= 1.0) {
+                  // print('Delete the Item');
+
+                  setState(() {
+                    isDeletePosition = true;
+                  });
+                } else {
+                  setState(() {
+                    isDeletePosition = false;
+                  });
+                }
+              },
+              child: widget,
+            ),
+          ),
+        ),
+      );
+    } else {
+      return Positioned(
+        child: Transform.translate(
+          offset: Offset(
+            e.position.dx * screen.width,
+            e.position.dy * screen.height,
+          ),
+          child: Transform.scale(
+            scale: e.scale,
+            child: Transform.rotate(
+              angle: e.rotation,
+              child: Listener(
+                onPointerDown: (details) {
+                  if (_inAction) return;
+                  _inAction = true;
+                  _activeItem = e;
+                  _initPos = details.position;
+                  _currentPos = e.position;
+                  _currentScale = e.scale;
+                  _currentRotation = e.rotation;
+                },
+                onPointerUp: (details) {
+                  _inAction = false;
+                  // print("e.position.dy: " + e.position.dy.toString());
+                  // print("e.position.dx: " + e.position.dx.toString());
+                  if (e.position.dy >= 0.8 &&
+                      e.position.dx >= 0.0 &&
+                      e.position.dx <= 1.0) {
+                    // print('Delete the Item');
 
                     setState(() {
+                      stackData.removeAt(stackData.indexOf(e));
                       _activeItem = null;
                     });
-                  },
-                  onPointerCancel: (details) {},
-                  onPointerMove: (details) {
-                    //print("e.position.dy: " + e.position.dy.toString());
-                    // print("e.position.dx: " + e.position.dx.toString());
-                    if (e.position.dy >= 0.8 &&
-                        e.position.dx >= 0.0 &&
-                        e.position.dx <= 1.0) {
-                      // print('Delete the Item');
+                  }
 
-                      setState(() {
-                        isDeletePosition = true;
-                      });
-                    } else {
-                      setState(() {
-                        isDeletePosition = false;
-                      });
-                    }
-                  },
-                  child: widget,
-                ),
+                  setState(() {
+                    _activeItem = null;
+                  });
+                },
+                onPointerCancel: (details) {},
+                onPointerMove: (details) {
+                  // print("e.position.dy: " + e.position.dy.toString());
+                  // print("e.position.dx: " + e.position.dx.toString());
+                  if (e.position.dy >= 0.8 &&
+                      e.position.dx >= 0.0 &&
+                      e.position.dx <= 1.0) {
+                    // print('Delete the Item');
+
+                    setState(() {
+                      isDeletePosition = true;
+                    });
+                  } else {
+                    setState(() {
+                      isDeletePosition = false;
+                    });
+                  }
+                },
+                child: widget,
               ),
             ),
-          )
-        : Positioned(
-            child: Transform.translate(
-              offset: Offset(
-                e.position.dx * screen.width,
-                e.position.dy * screen.height,
-              ),
-              child: Transform.scale(
-                scale: e.scale,
-                child: Transform.rotate(
-                  angle: e.rotation,
-                  child: Listener(
-                    onPointerDown: (details) {
-                      if (_inAction) return;
-                      _inAction = true;
-                      _activeItem = e;
-                      _initPos = details.position;
-                      _currentPos = e.position;
-                      _currentScale = e.scale;
-                      _currentRotation = e.rotation;
-                    },
-                    onPointerUp: (details) {
-                      _inAction = false;
-                      // print("e.position.dy: " + e.position.dy.toString());
-                      // print("e.position.dx: " + e.position.dx.toString());
-                      if (e.position.dy >= 0.8 &&
-                          e.position.dx >= 0.0 &&
-                          e.position.dx <= 1.0) {
-                        // print('Delete the Item');
-
-                        setState(() {
-                          stackData.removeAt(stackData.indexOf(e));
-                          _activeItem = null;
-                        });
-                      }
-
-                      setState(() {
-                        _activeItem = null;
-                      });
-                    },
-                    onPointerCancel: (details) {},
-                    onPointerMove: (details) {
-                      // print("e.position.dy: " + e.position.dy.toString());
-                      // print("e.position.dx: " + e.position.dx.toString());
-                      if (e.position.dy >= 0.8 &&
-                          e.position.dx >= 0.0 &&
-                          e.position.dx <= 1.0) {
-                        // print('Delete the Item');
-
-                        setState(() {
-                          isDeletePosition = true;
-                        });
-                      } else {
-                        setState(() {
-                          isDeletePosition = false;
-                        });
-                      }
-                    },
-                    child: widget,
-                  ),
-                ),
-              ),
-            ),
-          );
+          ),
+        ),
+      );
+    }
   }
 }
 
-enum ItemType { Image, Text }
+enum ItemType { Image, Text, Color }
 
 class EditableItem {
   Offset position = Offset(0.4, 0.4);
