@@ -3,6 +3,7 @@ library story_creator;
 import 'dart:io';
 import 'dart:typed_data';
 
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/widgets.dart';
@@ -16,54 +17,18 @@ class StoryCreator extends StatefulWidget {
   StoryCreator({
     Key? key,
     this.filePath,
+    this.bgColor,
   }) : super(key: key);
 
   final String? filePath;
+  final Color? bgColor;
 
   @override
   _StoryCreatorState createState() => _StoryCreatorState();
 }
 
 class _StoryCreatorState extends State<StoryCreator> {
-  static GlobalKey previewContainer = GlobalKey();
-
-  // ActiceItem
-  EditableItem? _activeItem;
-
-  // item initial position
-  Offset? _initPos;
-
-  // item current position
-  Offset? _currentPos;
-
-  // item current scale
-  double? _currentScale;
-
-  // item current rotation
-  double? _currentRotation;
-
-  // is item in action
-  bool _inAction = false;
-
-  // List of all editableitems
-  List<EditableItem> stackData = [];
-
-  // is textfield shown
-  bool isTextInput = false;
-  // current textfield text
-  String currentText = "";
-  // current textfield color
-  Color currentColor = Color(0xffffffff);
-  // current textfield colorpicker color
-  Color pickerColor = Color(0xffffffff);
-
-  // current textfield style
-  int currentTextStyle = 0;
-  // current textfield fontsize
-  double currentFontSize = 26.0;
-
-  // current textfield fontfamily list
-  List<String> fontFamilyList = [
+  static const List<String> fontFamilyList = [
     "Lato",
     "Montserrat",
     "Lobster",
@@ -74,448 +39,524 @@ class _StoryCreatorState extends State<StoryCreator> {
     "Noto Serif",
     "Anton"
   ];
-  // current textfield fontfamily
-  int currentFontFamily = 0;
 
-  // is activeitem moved to delete position
-  bool isDeletePosition = false;
+  final GlobalKey previewContainer = GlobalKey();
+
+  final ValueNotifier<Color?> bgColor = ValueNotifier(null);
+
+  List<EditableItem> stackData = [];
+
+  final ValueNotifier<EditableItem?> _activeItem = ValueNotifier(null);
+
+  Offset? initialPostition;
+  double? initialScale;
+  double? initialRotation;
+
+  final ValueNotifier<bool> isOnDelete = ValueNotifier(false);
 
   @override
   void initState() {
     super.initState();
 
-    stackData.add(EditableItem()
-      ..type = ItemType.Color
-      ..color = Theme.of(context).colorScheme.secondary);
+    bgColor.value = widget.bgColor;
 
-    if (widget.filePath != null)
-      stackData.add(
-        EditableItem()
-          ..type = ItemType.Image
-          ..value = widget.filePath
-          ..position = Offset(0.0, 0.0),
-      );
+    if (stackData.isEmpty && widget.filePath != null)
+      stackData.add(EditableItem(
+        type: ItemType.Image,
+        value: widget.filePath,
+        position: Offset(0.5, 0.5),
+      ));
   }
 
   @override
   Widget build(BuildContext context) {
-    final screen = MediaQuery.of(context).size;
-
-    return Scaffold(
-      resizeToAvoidBottomInset: false,
-      body: GestureDetector(
+    return ValueListenableBuilder<Color?>(
+      valueListenable: bgColor,
+      child: GestureDetector(
         onScaleStart: (details) {
-          if (_activeItem == null) return;
+          if (_activeItem.value == null) return;
 
-          _initPos = details.focalPoint;
-          _currentPos = _activeItem!.position;
-          _currentScale = _activeItem!.scale;
-          _currentRotation = _activeItem!.rotation;
+          initialPostition = _activeItem.value!.position.value;
+          initialScale = _activeItem.value!.scale.value;
+          initialRotation = _activeItem.value!.rotation.value;
         },
         onScaleUpdate: (details) {
-          if (_activeItem == null) return;
-          final delta = details.focalPoint - _initPos!;
-          final left = (delta.dx / screen.width) + _currentPos!.dx;
-          final top = (delta.dy / screen.height) + _currentPos!.dy;
+          if (_activeItem.value == null ||
+              initialPostition == null ||
+              initialScale == null ||
+              initialRotation == null) return;
 
-          setState(() {
-            _activeItem!.position = Offset(left, top);
-            _activeItem!.rotation = details.rotation + _currentRotation!;
-            _activeItem!.scale = details.scale * _currentScale!;
-          });
-        },
-        onTap: () {
-          setState(() {
-            isTextInput = !isTextInput;
-            _activeItem = null;
-          });
+          final delta = details.delta;
+          final left = delta.dx / MediaQuery.of(context).size.width;
+          final top = delta.dy / MediaQuery.of(context).size.height;
 
-          if (currentText.isNotEmpty) {
-            setState(() {
-              stackData.add(EditableItem()
-                ..type = ItemType.Text
-                ..value = currentText
-                ..color = currentColor
-                ..textStyle = currentTextStyle
-                ..fontSize = currentFontSize
-                ..fontFamily = currentFontFamily);
-              currentText = "";
-            });
-          }
+          _activeItem.value!.position.value =
+              Offset(left, top) + initialPostition!;
+          _activeItem.value!.rotation.value =
+              details.rotation + initialRotation!;
+          _activeItem.value!.scale.value = details.scale * initialScale!;
         },
         child: Stack(
           children: [
-            RepaintBoundary(
-              key: previewContainer,
-              child: Stack(
-                children: [
-                  Container(color: Colors.black54),
-                  ...stackData.map(_buildItemWidget),
-                  Visibility(
-                    visible: isTextInput,
-                    child: Container(
-                      height: screen.height,
-                      width: screen.width,
-                      color: Colors.black.withOpacity(0.4),
-                      child: Stack(
-                        children: [
-                          Center(
-                            child: SizedBox(
-                              width: screen.width / 1.5,
-                              child: Container(
-                                padding: currentTextStyle != 0
-                                    ? EdgeInsets.only(
-                                        left: 7,
-                                        right: 7,
-                                        top: 5,
-                                        bottom: 5,
-                                      )
-                                    : EdgeInsets.all(0),
-                                decoration: currentTextStyle != 0
-                                    ? BoxDecoration(
-                                        color: currentTextStyle == 1
-                                            ? Colors.black.withOpacity(1.0)
-                                            : Colors.white.withOpacity(1.0),
-                                        borderRadius: BorderRadius.all(
-                                          Radius.circular(4),
-                                        ),
-                                      )
-                                    : BoxDecoration(),
-                                child: TextField(
-                                  autofocus: true,
-                                  textAlign: TextAlign.center,
-                                  style: GoogleFonts.getFont(
-                                          fontFamilyList[currentFontFamily])
-                                      .copyWith(
-                                    color: currentColor,
-                                    fontSize: currentFontSize,
-                                  ),
-                                  cursorColor: currentColor,
-                                  maxLines: 3,
-                                  minLines: 1,
-                                  decoration: InputDecoration(
-                                    border: UnderlineInputBorder(
-                                      borderSide: BorderSide(
-                                        color: Colors.transparent,
-                                      ),
-                                    ),
-                                    focusedBorder: UnderlineInputBorder(
-                                      borderSide: BorderSide(
-                                        color: Colors.transparent,
-                                      ),
-                                    ),
-                                  ),
-                                  onChanged: (input) {
-                                    setState(() {
-                                      currentText = input;
-                                    });
-                                  },
-                                  onSubmitted: (input) {
-                                    if (input.isNotEmpty) {
-                                      setState(() {
-                                        stackData.add(EditableItem()
-                                          ..type = ItemType.Text
-                                          ..value = currentText
-                                          ..color = currentColor
-                                          ..textStyle = currentTextStyle
-                                          ..fontSize = currentFontSize
-                                          ..fontFamily = currentFontFamily);
-                                        currentText = "";
-                                      });
-                                    } else {
-                                      setState(() {
-                                        currentText = "";
-                                      });
-                                    }
-
-                                    setState(() {
-                                      isTextInput = !isTextInput;
-                                      _activeItem = null;
-                                    });
-                                  },
-                                ),
-                              ),
-                            ),
-                          ),
-                          Positioned(
-                            top: 40,
-                            child: Container(
-                              width: screen.width,
-                              padding: const EdgeInsets.all(8.0),
-                              child: Row(
-                                crossAxisAlignment: CrossAxisAlignment.center,
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  IconButton(
-                                    icon: Icon(Icons.color_lens_outlined,
-                                        color: Colors.white),
-                                    onPressed: () {
-                                      // raise the [showDialog] widget
-                                      showDialog(
-                                        context: context,
-                                        builder: (ctx) {
-                                          return AlertDialog(
-                                            title: const Text('Pick a color!'),
-                                            content: SingleChildScrollView(
-                                              child: ColorPicker(
-                                                pickerColor: pickerColor,
-                                                onColorChanged: (color) {
-                                                  setState(() {
-                                                    pickerColor = color;
-                                                  });
-                                                },
-                                                showLabel: true,
-                                                pickerAreaHeightPercent: 0.8,
-                                              ),
-                                            ),
-                                            actions: <Widget>[
-                                              TextButton(
-                                                child: const Text('Got it'),
-                                                onPressed: () {
-                                                  setState(() {
-                                                    currentColor = pickerColor;
-                                                  });
-                                                  Navigator.of(ctx).pop();
-                                                },
-                                              ),
-                                            ],
-                                          );
-                                        },
-                                      );
-                                    },
-                                  ),
-                                  IconButton(
-                                    icon: Container(
-                                      padding: currentTextStyle != 0
-                                          ? EdgeInsets.only(
-                                              left: 7,
-                                              right: 7,
-                                              top: 5,
-                                              bottom: 5,
-                                            )
-                                          : EdgeInsets.all(0),
-                                      decoration: currentTextStyle != 0
-                                          ? BoxDecoration(
-                                              color: currentTextStyle == 1
-                                                  ? Colors.black
-                                                      .withOpacity(1.0)
-                                                  : Colors.white
-                                                      .withOpacity(1.0),
-                                              borderRadius: BorderRadius.all(
-                                                Radius.circular(4),
-                                              ),
-                                            )
-                                          : BoxDecoration(),
-                                      child: Icon(Icons.auto_awesome,
-                                          color: currentTextStyle != 2
-                                              ? Colors.white
-                                              : Colors.black),
-                                    ),
-                                    onPressed: () {
-                                      if (currentTextStyle < 2) {
-                                        setState(() {
-                                          currentTextStyle++;
-                                        });
-                                      } else {
-                                        setState(() {
-                                          currentTextStyle = 0;
-                                        });
-                                      }
-                                    },
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                          Positioned(
-                            top: screen.height / 2 - 45,
-                            left: -120,
-                            child: Transform(
-                              alignment: FractionalOffset.center,
-                              // Rotate sliders by 90 degrees
-                              transform: Matrix4.identity()
-                                ..rotateZ(270 * 3.1415927 / 180),
-                              child: SizedBox(
-                                width: 300,
-                                child: Slider(
-                                  value: currentFontSize,
-                                  min: 14,
-                                  max: 74,
-                                  activeColor: Colors.white,
-                                  inactiveColor: Colors.white.withOpacity(0.4),
-                                  onChanged: (input) {
-                                    setState(() {
-                                      currentFontSize = input;
-                                    });
-                                  },
-                                ),
-                              ),
-                            ),
-                          ),
-                          Positioned(
-                            bottom: screen.height / 2.75,
-                            left: screen.width / 6,
-                            child: Center(
-                              child: Container(
-                                width: screen.width / 1.5,
-                                height: 40,
-                                alignment: Alignment.center,
-                                child: ListView.builder(
-                                    itemCount: fontFamilyList.length,
-                                    shrinkWrap: true,
-                                    scrollDirection: Axis.horizontal,
-                                    itemBuilder: (context, index) {
-                                      return GestureDetector(
-                                        onTap: () {
-                                          setState(() {
-                                            currentFontFamily = index;
-                                          });
-                                        },
-                                        child: Container(
-                                          height: 40,
-                                          width: 40,
-                                          alignment: Alignment.center,
-                                          decoration: BoxDecoration(
-                                            color: index == currentFontFamily
-                                                ? Colors.white
-                                                : Colors.black,
-                                            borderRadius: BorderRadius.all(
-                                              Radius.circular(20),
-                                            ),
-                                          ),
-                                          child: Text(
-                                            'Aa',
-                                            style: GoogleFonts.getFont(
-                                                    fontFamilyList[index])
-                                                .copyWith(
-                                              color: index == currentFontFamily
-                                                  ? Colors.black
-                                                  : Colors.white,
-                                            ),
-                                          ),
-                                        ),
-                                      );
-                                    }),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
+            SafeArea(
+              child: RepaintBoundary(
+                key: previewContainer,
+                child: Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    GestureDetector(
+                      onTap: _editOrAddItem,
                     ),
-                  ),
-                ],
-              ),
-            ),
-            Visibility(
-              visible: !isTextInput,
-              child: Visibility(
-                visible: _activeItem == null,
-                child: Positioned(
-                  top: 50,
-                  right: 20,
-                  child: TextButton(
-                    onPressed: () async {
-                      //done: save image and return captured image to previous screen
-
-                      RenderRepaintBoundary boundary =
-                          previewContainer.currentContext!.findRenderObject()
-                              as RenderRepaintBoundary;
-                      ui.Image image = await boundary.toImage(
-                        pixelRatio: 2.0,
-                      );
-                      final directory = (await getTemporaryDirectory()).path;
-                      ByteData? byteData = await image.toByteData(
-                        format: ui.ImageByteFormat.png,
-                      );
-                      Uint8List pngBytes = byteData!.buffer.asUint8List();
-                      // print(pngBytes);
-
-                      File imgFile = File(
-                          '$directory/' + DateTime.now().toString() + '.png');
-                      imgFile.writeAsBytes(pngBytes).then((value) {
-                        // done: return imgFile
-                        Navigator.of(context).pop(imgFile);
-                      });
-                    },
-                    style: ButtonStyle(
-                      shape: MaterialStateProperty.all(
-                        RoundedRectangleBorder(
-                          borderRadius: BorderRadius.all(
-                            Radius.circular(10),
+                    if (stackData.isEmpty)
+                      GestureDetector(
+                        onTap: _editOrAddItem,
+                        child: Center(
+                          child: Text(
+                            'Tap to type',
+                            style:
+                                Theme.of(context).textTheme.headline5?.copyWith(
+                                      color: Theme.of(context)
+                                          .textTheme
+                                          .headline5
+                                          ?.color
+                                          ?.withOpacity(0.4),
+                                    ),
                           ),
                         ),
                       ),
-                      backgroundColor: MaterialStateProperty.all(
-                        Colors.black.withOpacity(0.7),
-                      ),
-                    ),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text(
-                          'Done',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 18,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
+                    ...stackData.map(_buildItemWidget),
+                  ],
                 ),
               ),
             ),
-            Visibility(
-              visible: !isTextInput,
-              child: Visibility(
-                visible: _activeItem != null,
-                child: Positioned(
-                  bottom: 50,
-                  child: Container(
-                    width: screen.width,
-                    child: Center(
-                      child: Container(
-                        height: !isDeletePosition ? 60.0 : 100,
-                        width: !isDeletePosition ? 60.0 : 100,
+            Positioned(
+              top: 40,
+              left: 20,
+              child: IconButton(
+                icon: Icon(
+                  Icons.color_lens,
+                  color: Colors.white,
+                  size: 33,
+                ),
+                onPressed: () async {
+                  final rslt = await _pickColor(
+                    bgColor.value ??
+                        Theme.of(context).textTheme.headline5?.color ??
+                        Colors.white,
+                  );
+                  if (rslt != null) bgColor.value = rslt;
+                },
+              ),
+            ),
+            ValueListenableBuilder<EditableItem?>(
+              valueListenable: _activeItem,
+              child: Positioned(
+                bottom: 20,
+                right: 20,
+                child: TextButton(
+                  onPressed: () async {
+                    //done: save image and return captured image to previous screen
+
+                    RenderRepaintBoundary boundary =
+                        previewContainer.currentContext!.findRenderObject()
+                            as RenderRepaintBoundary;
+                    ui.Image image = await boundary.toImage(
+                      pixelRatio: 2.0,
+                    );
+                    final directory = (await getTemporaryDirectory()).path;
+                    ByteData? byteData = await image.toByteData(
+                      format: ui.ImageByteFormat.png,
+                    );
+                    Uint8List pngBytes = byteData!.buffer.asUint8List();
+                    // print(pngBytes);
+
+                    File imgFile = File(
+                        '$directory/' + DateTime.now().toString() + '.png');
+                    imgFile.writeAsBytes(pngBytes).then((value) {
+                      // done: return imgFile
+                      Navigator.of(context).pop(imgFile);
+                    });
+                  },
+                  style: ButtonStyle(
+                    shape: MaterialStateProperty.all(
+                      RoundedRectangleBorder(
+                        borderRadius: BorderRadius.all(
+                          Radius.circular(10),
+                        ),
+                      ),
+                    ),
+                    backgroundColor: MaterialStateProperty.all(
+                      Colors.black.withOpacity(0.7),
+                    ),
+                  ),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        'Done',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 18,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              builder: (context, activeItem, child) => Visibility(
+                visible: activeItem == null && stackData.isNotEmpty,
+                child: child!,
+              ),
+            ),
+            ValueListenableBuilder<EditableItem?>(
+              valueListenable: _activeItem,
+              child: Positioned(
+                bottom: MediaQuery.of(context).size.height * 0.02,
+                width: MediaQuery.of(context).size.width,
+                child: Center(
+                  child: ValueListenableBuilder<bool>(
+                    valueListenable: isOnDelete,
+                    builder: (context, isOnDelete, _) {
+                      return Container(
+                        height: !isOnDelete ? 60.0 : 100,
+                        width: !isOnDelete ? 60.0 : 100,
                         decoration: BoxDecoration(
                           color: Colors.black.withOpacity(0.5),
                           borderRadius: BorderRadius.all(
-                            Radius.circular(!isDeletePosition ? 30 : 50),
+                            Radius.circular(!isOnDelete ? 30 : 50),
                           ),
                         ),
                         child: Icon(
                           Icons.delete,
                           color: Colors.white,
-                          size: !isDeletePosition ? 30 : 50,
+                          size: !isOnDelete ? 30 : 50,
                         ),
+                      );
+                    },
+                  ),
+                ),
+              ),
+              builder: (context, activeItem, child) {
+                return Visibility(
+                  visible: activeItem != null,
+                  child: child!,
+                );
+              },
+            ),
+          ],
+        ),
+      ),
+      builder: (context, bgColor, body) {
+        return Scaffold(
+          resizeToAvoidBottomInset: false,
+          backgroundColor: bgColor,
+          body: body,
+        );
+      },
+    );
+  }
+
+  void _editOrAddItem([EditableItem? activeItem]) async {
+    final item = activeItem?.copy() ?? EditableItem(type: ItemType.Text);
+    final TextEditingController itemTextController =
+        TextEditingController(text: item.value.value);
+
+    final rslt = await Navigator.of(context).push<EditableItem?>(
+      DialogRoute(
+        context: context,
+        builder: (context) => Scaffold(
+          backgroundColor: Colors.transparent,
+          body: Stack(
+            children: [
+              Center(
+                child: SizedBox(
+                  width: MediaQuery.of(context).size.width / 1.5,
+                  child: ValueListenableBuilder<int>(
+                    valueListenable: item.textStyle,
+                    child: ValueListenableBuilder<int>(
+                      valueListenable: item.fontFamily,
+                      builder: (context, fontFamily, child) =>
+                          ValueListenableBuilder<Color?>(
+                        valueListenable: item.color,
+                        builder: (context, color, child) =>
+                            ValueListenableBuilder<double>(
+                          valueListenable: item.fontSize,
+                          builder: (context, fontSize, child) => TextFormField(
+                            autofocus: true,
+                            textAlign: TextAlign.center,
+                            style:
+                                GoogleFonts.getFont(fontFamilyList[fontFamily])
+                                    .copyWith(
+                              color: color,
+                              fontSize: fontSize,
+                            ),
+                            onChanged: (t) => item.value.value = t,
+                            controller: itemTextController,
+                            cursorColor: color,
+                            maxLines: 3,
+                            minLines: 1,
+                            decoration: InputDecoration(
+                              border: UnderlineInputBorder(
+                                borderSide: BorderSide(
+                                  color: Colors.transparent,
+                                ),
+                              ),
+                              focusedBorder: UnderlineInputBorder(
+                                borderSide: BorderSide(
+                                  color: Colors.transparent,
+                                ),
+                              ),
+                            ),
+                            onFieldSubmitted: (input) {
+                              if (input.isNotEmpty) {
+                                Navigator.of(context).pop(item);
+                              } else {
+                                Navigator.of(context).pop();
+                              }
+                            },
+                          ),
+                        ),
+                      ),
+                    ),
+                    builder: (context, textStyle, child) {
+                      return Container(
+                        padding: textStyle != 0
+                            ? EdgeInsets.only(
+                                left: 7,
+                                right: 7,
+                                top: 5,
+                                bottom: 5,
+                              )
+                            : EdgeInsets.zero,
+                        decoration: textStyle != 0
+                            ? BoxDecoration(
+                                color: textStyle == 1
+                                    ? Colors.black.withOpacity(1.0)
+                                    : Colors.white.withOpacity(1.0),
+                                borderRadius: BorderRadius.all(
+                                  Radius.circular(4),
+                                ),
+                              )
+                            : BoxDecoration(),
+                        child: child,
+                      );
+                    },
+                  ),
+                ),
+              ),
+              Positioned(
+                top: 40,
+                child: Container(
+                  width: MediaQuery.of(context).size.width,
+                  padding: const EdgeInsets.all(8.0),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      IconButton(
+                        icon: Icon(
+                          Icons.color_lens_outlined,
+                          color: Colors.white,
+                        ),
+                        onPressed: () async {
+                          final rslt = await _pickColor(
+                            item.color.value ??
+                                Theme.of(context).textTheme.headline5?.color ??
+                                Colors.white,
+                          );
+                          if (rslt != null) item.color.value = rslt;
+                        },
+                      ),
+                      IconButton(
+                        icon: ValueListenableBuilder<int>(
+                          valueListenable: item.textStyle,
+                          builder: (context, textStyle, child) => Container(
+                            padding: textStyle != 0
+                                ? EdgeInsets.only(
+                                    left: 7,
+                                    right: 7,
+                                    top: 5,
+                                    bottom: 5,
+                                  )
+                                : EdgeInsets.zero,
+                            decoration: textStyle != 0
+                                ? BoxDecoration(
+                                    color: textStyle == 1
+                                        ? Colors.black.withOpacity(1.0)
+                                        : Colors.white.withOpacity(1.0),
+                                    borderRadius: BorderRadius.all(
+                                      Radius.circular(4),
+                                    ),
+                                  )
+                                : BoxDecoration(),
+                            child: Icon(Icons.auto_awesome,
+                                color: textStyle != 2
+                                    ? Colors.white
+                                    : Colors.black),
+                          ),
+                        ),
+                        onPressed: () {
+                          if (item.textStyle.value < 2) {
+                            item.textStyle.value++;
+                          } else {
+                            item.textStyle.value = 0;
+                          }
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              Positioned(
+                top: MediaQuery.of(context).size.height / 2 - 45,
+                left: -120,
+                child: Transform(
+                  alignment: FractionalOffset.center,
+                  // Rotate sliders by 90 degrees
+                  transform: Matrix4.identity()..rotateZ(270 * 3.1415927 / 180),
+                  child: SizedBox(
+                    width: 300,
+                    child: ValueListenableBuilder<double>(
+                      valueListenable: item.fontSize,
+                      builder: (context, fontSize, child) => Slider(
+                        value: fontSize,
+                        min: 14,
+                        max: 74,
+                        activeColor: Colors.white,
+                        inactiveColor: Colors.white.withOpacity(0.4),
+                        onChanged: (input) {
+                          item.fontSize.value = input;
+                        },
                       ),
                     ),
                   ),
                 ),
               ),
-            ),
-          ],
+              Positioned(
+                bottom: MediaQuery.of(context).size.height / 25,
+                left: MediaQuery.of(context).size.width / 6,
+                child: Center(
+                  child: Container(
+                    width: MediaQuery.of(context).size.width / 1.5,
+                    height: 40,
+                    alignment: Alignment.center,
+                    child: ListView.builder(
+                      itemCount: fontFamilyList.length,
+                      shrinkWrap: true,
+                      scrollDirection: Axis.horizontal,
+                      itemBuilder: (context, index) {
+                        return GestureDetector(
+                          onTap: () {
+                            item.fontFamily.value = index;
+                          },
+                          child: ValueListenableBuilder<int>(
+                            valueListenable: item.fontFamily,
+                            builder: (context, fontFamily, child) => Container(
+                              height: 40,
+                              width: 40,
+                              alignment: Alignment.center,
+                              decoration: BoxDecoration(
+                                color: index == fontFamily
+                                    ? Colors.white
+                                    : Colors.black,
+                                borderRadius: BorderRadius.all(
+                                  Radius.circular(20),
+                                ),
+                              ),
+                              child: Text(
+                                'Aa',
+                                style:
+                                    GoogleFonts.getFont(fontFamilyList[index])
+                                        .copyWith(
+                                  color: index == fontFamily
+                                      ? Colors.black
+                                      : Colors.white,
+                                ),
+                              ),
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ),
+              ),
+              Positioned(
+                top: MediaQuery.of(context).size.height / 35,
+                right: 20,
+                child: TextButton(
+                  onPressed: () {
+                    Navigator.of(context).pop(item);
+                  },
+                  style: ButtonStyle(
+                    shape: MaterialStateProperty.all(
+                      RoundedRectangleBorder(
+                        borderRadius: BorderRadius.all(
+                          Radius.circular(10),
+                        ),
+                      ),
+                    ),
+                    backgroundColor: MaterialStateProperty.all(
+                      Colors.black.withOpacity(0.7),
+                    ),
+                  ),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        'Next',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 18,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
+
+    if (rslt != null)
+      setState(
+        () {
+          if (activeItem == null)
+            stackData.add(rslt);
+          else {
+            stackData
+              ..remove(activeItem)
+              ..add(rslt);
+          }
+        },
+      );
   }
 
   Widget _buildItemWidget(EditableItem e) {
     final screen = MediaQuery.of(context).size;
 
-    late final Widget widget;
+    late Widget widget;
+
     switch (e.type) {
       case ItemType.Text:
-        if (e.textStyle == 0) {
-          widget = Text(
-            e.value!,
-            style: GoogleFonts.getFont(fontFamilyList[e.fontFamily!]).copyWith(
-              color: e.color,
-              fontSize: e.fontSize,
-            ),
-          );
-        } else if (e.textStyle == 1) {
+        widget = ValueListenableBuilder<int?>(
+          valueListenable: e.fontFamily,
+          builder: (context, fontFamily, _) {
+            return Text(
+              e.value.value ?? '',
+              style:
+                  GoogleFonts.getFont(fontFamilyList[fontFamily ?? 0]).copyWith(
+                color: e.color.value,
+                fontSize: e.fontSize.value,
+              ),
+            );
+          },
+        );
+        if (e.textStyle.value == 1 || e.textStyle.value == 2) {
           widget = Container(
             padding: EdgeInsets.only(left: 7, right: 7, top: 5, bottom: 5),
             decoration: BoxDecoration(
@@ -524,200 +565,173 @@ class _StoryCreatorState extends State<StoryCreator> {
                 Radius.circular(4),
               ),
             ),
-            child: Text(
-              e.value!,
-              style:
-                  GoogleFonts.getFont(fontFamilyList[e.fontFamily!]).copyWith(
-                color: e.color,
-                fontSize: e.fontSize,
-              ),
-            ),
-          );
-        } else if (e.textStyle == 2) {
-          widget = Container(
-            padding: EdgeInsets.only(left: 7, right: 7, top: 5, bottom: 5),
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(1.0),
-              borderRadius: BorderRadius.all(
-                Radius.circular(4),
-              ),
-            ),
-            child: Text(
-              e.value!,
-              style:
-                  GoogleFonts.getFont(fontFamilyList[e.fontFamily!]).copyWith(
-                color: e.color,
-                fontSize: e.fontSize,
-              ),
-            ),
-          );
-        } else {
-          widget = Text(
-            e.value!,
-            style: GoogleFonts.getFont(fontFamilyList[e.fontFamily!]).copyWith(
-              color: e.color,
-              fontSize: e.fontSize,
-            ),
+            child: widget,
           );
         }
         break;
       case ItemType.Image:
-        widget = Center(
-          child: Image.file(
-            File(stackData[0].value!),
-            // fit: BoxFit.fitHeight,
-          ),
-        );
-        break;
-      case null:
-        break;
-      case ItemType.Color:
-        widget = Positioned.fill(
-          child: Container(color: e.color),
+        widget = Image.file(
+          File(stackData[0].value.value!),
+          // fit: BoxFit.fitHeight,
         );
         break;
     }
-
-    if (e.type == ItemType.Text) {
-      return Positioned(
-        top: e.position.dy * screen.height,
-        left: e.position.dx * screen.width,
-        child: Transform.scale(
-          scale: e.scale,
-          child: Transform.rotate(
-            angle: e.rotation,
-            child: Listener(
-              onPointerDown: (details) {
-                // if (e.type != ItemType.Image) {
-                if (_inAction) return;
-                _inAction = true;
-                _activeItem = e;
-                _initPos = details.position;
-                _currentPos = e.position;
-                _currentScale = e.scale;
-                _currentRotation = e.rotation;
-                // }
-              },
-              onPointerUp: (details) {
-                _inAction = false;
-                // print("e.position.dy: " + e.position.dy.toString());
-                // print("e.position.dx: " + e.position.dx.toString());
-                if (e.position.dy >= 0.8 &&
-                    e.position.dx >= 0.0 &&
-                    e.position.dx <= 1.0) {
-                  // print('Delete the Item');
-
-                  setState(() {
-                    stackData.removeAt(stackData.indexOf(e));
-                    _activeItem = null;
-                  });
-                }
-
-                setState(() {
-                  _activeItem = null;
-                });
-              },
-              onPointerCancel: (details) {},
-              onPointerMove: (details) {
-                //print("e.position.dy: " + e.position.dy.toString());
-                // print("e.position.dx: " + e.position.dx.toString());
-                if (e.position.dy >= 0.8 &&
-                    e.position.dx >= 0.0 &&
-                    e.position.dx <= 1.0) {
-                  // print('Delete the Item');
-
-                  setState(() {
-                    isDeletePosition = true;
-                  });
-                } else {
-                  setState(() {
-                    isDeletePosition = false;
-                  });
-                }
-              },
-              child: widget,
-            ),
-          ),
-        ),
-      );
-    } else {
-      return Positioned(
-        child: Transform.translate(
-          offset: Offset(
-            e.position.dx * screen.width,
-            e.position.dy * screen.height,
-          ),
-          child: Transform.scale(
-            scale: e.scale,
-            child: Transform.rotate(
-              angle: e.rotation,
+    return ValueListenableBuilder<Offset>(
+      valueListenable: e.position,
+      child: ValueListenableBuilder<double>(
+        valueListenable: e.rotation,
+        child: ValueListenableBuilder<double>(
+          valueListenable: e.scale,
+          child: ConstrainedBox(
+            key: e.key,
+            constraints: BoxConstraints.loose(MediaQuery.of(context).size),
+            child: GestureDetector(
+              onTap: () => _editOrAddItem(e),
               child: Listener(
                 onPointerDown: (details) {
-                  if (_inAction) return;
-                  _inAction = true;
-                  _activeItem = e;
-                  _initPos = details.position;
-                  _currentPos = e.position;
-                  _currentScale = e.scale;
-                  _currentRotation = e.rotation;
+                  _activeItem.value = e;
+
+                  initialPostition = details.position;
+                  initialScale = e.scale.value;
+                  initialRotation = e.rotation.value;
                 },
                 onPointerUp: (details) {
-                  _inAction = false;
-                  // print("e.position.dy: " + e.position.dy.toString());
-                  // print("e.position.dx: " + e.position.dx.toString());
-                  if (e.position.dy >= 0.8 &&
-                      e.position.dx >= 0.0 &&
-                      e.position.dx <= 1.0) {
-                    // print('Delete the Item');
-
-                    setState(() {
-                      stackData.removeAt(stackData.indexOf(e));
-                      _activeItem = null;
-                    });
+                  if (isOnDelete.value) {
+                    setState(() => stackData.remove(e));
+                    isOnDelete.value = false;
                   }
-
-                  setState(() {
-                    _activeItem = null;
-                  });
+                  _activeItem.value = null;
                 },
                 onPointerCancel: (details) {},
                 onPointerMove: (details) {
-                  // print("e.position.dy: " + e.position.dy.toString());
-                  // print("e.position.dx: " + e.position.dx.toString());
-                  if (e.position.dy >= 0.8 &&
-                      e.position.dx >= 0.0 &&
-                      e.position.dx <= 1.0) {
-                    // print('Delete the Item');
-
-                    setState(() {
-                      isDeletePosition = true;
-                    });
+                  if (e.position.value.dy >= 0.88 &&
+                      e.position.value.dx >= 0.45 &&
+                      e.position.value.dx <= 0.55) {
+                    isOnDelete.value = true;
                   } else {
-                    setState(() {
-                      isDeletePosition = false;
-                    });
+                    isOnDelete.value = false;
                   }
                 },
                 child: widget,
               ),
             ),
           ),
+          builder: (context, scale, child) => Transform.scale(
+            scale: scale,
+            child: child,
+          ),
         ),
-      );
-    }
+        builder: (context, rotation, child) => Transform.rotate(
+          angle: rotation,
+          child: child,
+        ),
+      ),
+      builder: (context, position, child) {
+        if (e.key.currentContext == null)
+          return Align(
+            alignment: Alignment.center,
+            child: child!,
+          );
+
+        return Positioned(
+          top: (position.dy * screen.height) -
+              ((e.key.currentContext
+                          ?.findRenderObject()
+                          ?.paintBounds
+                          .size
+                          .height ??
+                      screen.height) /
+                  2),
+          left: (position.dx * screen.width) -
+              ((e.key.currentContext
+                          ?.findRenderObject()
+                          ?.paintBounds
+                          .size
+                          .width ??
+                      screen.width) /
+                  2),
+          child: child!,
+        );
+      },
+    );
+  }
+
+  Future<Color?> _pickColor(Color initial) async {
+    Color picked = initial;
+    return await showDialog<Color?>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Pick a color'),
+          content: SingleChildScrollView(
+            child: ColorPicker(
+              pickerColor: initial,
+              onColorChanged: (color) {
+                picked = color;
+              },
+              showLabel: true,
+              pickerAreaHeightPercent: 0.8,
+            ),
+          ),
+          actions: <Widget>[
+            TextButton(
+              child: const Text('Done'),
+              onPressed: () => Navigator.of(context).pop(picked),
+            ),
+          ],
+        );
+      },
+    );
   }
 }
 
-enum ItemType { Image, Text, Color }
+enum ItemType { Image, Text }
 
 class EditableItem {
-  Offset position = Offset(0.4, 0.4);
-  double scale = 1.0;
-  double rotation = 0.0;
-  ItemType? type;
-  String? value;
-  Color? color;
-  int? textStyle;
-  double? fontSize;
-  int? fontFamily;
+  final ItemType type;
+  final GlobalKey key;
+  ValueNotifier<Offset> position;
+  ValueNotifier<double> scale;
+  ValueNotifier<double> rotation;
+  ValueNotifier<String?> value;
+  ValueNotifier<Color?> color;
+  ValueNotifier<int> textStyle;
+  ValueNotifier<double> fontSize;
+  ValueNotifier<int> fontFamily;
+
+  EditableItem({
+    required this.type,
+    GlobalKey? key,
+    Offset position = const Offset(0.5, 0.5),
+    double scale = 1,
+    double rotation = 0,
+    String? value,
+    Color? color,
+    int textStyle = 0,
+    double fontSize = 25,
+    int fontFamily = 0,
+  })  : key = key ?? GlobalKey(),
+        position = ValueNotifier(position),
+        scale = ValueNotifier(scale),
+        rotation = ValueNotifier(rotation),
+        value = ValueNotifier(value),
+        color = ValueNotifier(color),
+        textStyle = ValueNotifier(textStyle),
+        fontSize = ValueNotifier(fontSize),
+        fontFamily = ValueNotifier(fontFamily);
+
+  EditableItem copy() {
+    return EditableItem(
+      key: key,
+      type: type,
+      position: position.value,
+      scale: scale.value,
+      rotation: rotation.value,
+      value: value.value,
+      color: color.value,
+      textStyle: textStyle.value,
+      fontSize: fontSize.value,
+      fontFamily: fontFamily.value,
+    );
+  }
 }

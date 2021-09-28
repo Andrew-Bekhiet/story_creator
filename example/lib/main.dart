@@ -27,10 +27,8 @@ class _MyAppState extends State<MyApp> {
         title: Text('Story Creator Example'),
       ),
       body: Center(
-        child: Stack(
-          alignment: Alignment.center,
-          // mainAxisAlignment: MainAxisAlignment.center,
-          // crossAxisAlignment: CrossAxisAlignment.center,
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
             editedFile != null
                 ? Image.file(
@@ -61,6 +59,25 @@ class _MyAppState extends State<MyApp> {
                 });
               },
               child: Text('Pick Image'),
+            ),
+            TextButton(
+              onPressed: () async {
+                editedFile = await Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (context) => StoryCreator(
+                      bgColor: Colors.amber,
+                    ),
+                  ),
+                );
+
+                // ------- you have editedFile
+
+                if (editedFile != null) {
+                  print('editedFile: ' + editedFile!.path);
+                  setState(() {});
+                }
+              },
+              child: Text('Create Text'),
             ),
           ],
         ),
