@@ -363,9 +363,7 @@ class _StoryCreatorState extends State<StoryCreator> {
                                   '.png',
                             ).writeAsBytes(pngBytes),
                             gifs: stackData
-                                .where((i) =>
-                                    i.type == ItemType.GIF ||
-                                    i.type == ItemType.Image)
+                                .where((i) => i.type == ItemType.GIF)
                                 .map(
                                   (gif) => GIFProperties._fromEditableItem(gif),
                                 )
