@@ -170,6 +170,15 @@ packages:
       url: "https://pub.dartlang.org"
     source: hosted
     version: "0.12.10"
+  matrix_gesture_detector:
+    dependency: transitive
+    description:
+      path: "."
+      ref: "761026023891f22b61cb8f3116a0057e384d5bd5"
+      resolved-ref: "761026023891f22b61cb8f3116a0057e384d5bd5"
+      url: "https://github.com/azack/matrix_gesture_detector.git"
+    source: git
+    version: "0.2.0-nullsafety"
   meta:
     dependency: transitive
     description:
@@ -226,6 +235,20 @@ packages:
       url: "https://pub.dartlang.org"
     source: hosted
     version: "1.11.1"
+  permission_handler:
+    dependency: transitive
+    description:
+      name: permission_handler
+      url: "https://pub.dartlang.org"
+    source: hosted
+    version: "8.1.6"
+  permission_handler_platform_interface:
+    dependency: transitive
+    description:
+      name: permission_handler_platform_interface
+      url: "https://pub.dartlang.org"
+    source: hosted
+    version: "3.6.2"
   platform:
     dependency: transitive
     description:
@@ -272,7 +295,7 @@ packages:
       path: ".."
       relative: true
     source: path
-    version: "1.0.0"
+    version: "2.0.0"
   stream_channel:
     dependency: transitive
     description:

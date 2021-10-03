@@ -1,7 +1,9 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:story_creator/story_creator.dart';
+import 'package:story_creator/centered_stack.dart';
+import 'package:flutter/cupertino.dart';
+import 'package:flutter/rendering.dart';
 
 void main() {
   runApp(
@@ -18,7 +20,7 @@ class MyApp extends StatefulWidget {
 }
 
 class _MyAppState extends State<MyApp> {
-  File? editedFile;
+  Story? story;
 
   @override
   Widget build(BuildContext context) {
@@ -26,23 +28,44 @@ class _MyAppState extends State<MyApp> {
       appBar: AppBar(
         title: Text('Story Creator Example'),
       ),
-      body: Center(
+      body: SingleChildScrollView(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            editedFile != null
-                ? Image.file(
-                    editedFile!,
+            if (story != null)
+              CenteredStack(
+                alignment: Alignment.center,
+                children: [
+                  Image.file(
+                    story!.image,
                     fit: BoxFit.cover,
-                  )
-                : SizedBox.shrink(),
+                  ),
+                  ...story!.gifs.map(
+                    (gif) => Positioned(
+                      top: gif.position.dy,
+                      left: gif.position.dx,
+                      child: Transform.rotate(
+                        angle: gif.rotation,
+                        child: Transform.scale(
+                          scale: gif.scale,
+                          child: ConstrainedBox(
+                            constraints: BoxConstraints.loose(
+                                MediaQuery.of(context).size),
+                            child: Image.network(gif.url),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             TextButton(
               onPressed: () async {
                 final picker = ImagePicker();
                 await picker
                     .pickImage(source: ImageSource.gallery)
                     .then((file) async {
-                  editedFile = await Navigator.of(context).push(
+                  story = await Navigator.of(context).push(
                     MaterialPageRoute(
                       builder: (context) => StoryCreator(
                         filePath: file!.path,
@@ -52,8 +75,7 @@ class _MyAppState extends State<MyApp> {
 
                   // ------- you have editedFile
 
-                  if (editedFile != null) {
-                    print('editedFile: ' + editedFile!.path);
+                  if (story != null) {
                     setState(() {});
                   }
                 });
@@ -62,7 +84,7 @@ class _MyAppState extends State<MyApp> {
             ),
             TextButton(
               onPressed: () async {
-                editedFile = await Navigator.of(context).push(
+                story = await Navigator.of(context).push(
                   MaterialPageRoute(
                     builder: (context) => StoryCreator(
                       bgColor: Colors.amber,
@@ -70,10 +92,7 @@ class _MyAppState extends State<MyApp> {
                   ),
                 );
 
-                // ------- you have editedFile
-
-                if (editedFile != null) {
-                  print('editedFile: ' + editedFile!.path);
+                if (story != null) {
                   setState(() {});
                 }
               },
