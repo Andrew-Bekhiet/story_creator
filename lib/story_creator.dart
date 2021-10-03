@@ -71,8 +71,6 @@ class _StoryCreatorState extends State<StoryCreator> {
   void initState() {
     super.initState();
 
-    bgColor.value = widget.bgColor;
-
     if (stackData.isEmpty && widget.filePath != null)
       WidgetsBinding.instance!.addPostFrameCallback((_) {
         stackData.add(EditableItem(
@@ -82,6 +80,13 @@ class _StoryCreatorState extends State<StoryCreator> {
         ));
         setState(() {});
       });
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+
+    bgColor.value = widget.bgColor ?? Theme.of(context).scaffoldBackgroundColor;
   }
 
   @override
@@ -121,46 +126,49 @@ class _StoryCreatorState extends State<StoryCreator> {
                 children: [
                   RepaintBoundary(
                     key: previewContainer,
-                    child: ValueListenableBuilder<Color?>(
-                      valueListenable: bgColor,
-                      builder: (context, bgColor, child) =>
-                          Container(color: bgColor, child: child),
-                      child: LayoutBuilder(
-                        builder: (context, constraints) {
-                          stackSize = constraints.biggest;
+                    child: LayoutBuilder(
+                      builder: (context, constraints) {
+                        stackSize = constraints.biggest;
 
-                          return CenteredStack(
-                            alignment: Alignment.center,
-                            children: [
+                        return CenteredStack(
+                          alignment: Alignment.center,
+                          children: [
+                            ValueListenableBuilder<Color?>(
+                              valueListenable: bgColor,
+                              builder: (context, bgColor, child) => Container(
+                                width: double.infinity,
+                                height: double.infinity,
+                                color: bgColor,
+                              ),
+                            ),
+                            GestureDetector(
+                              onTap: _editOrAddItem,
+                            ),
+                            if (stackData.isEmpty)
                               GestureDetector(
                                 onTap: _editOrAddItem,
-                              ),
-                              if (stackData.isEmpty)
-                                GestureDetector(
-                                  onTap: _editOrAddItem,
-                                  child: Center(
-                                    child: Text(
-                                      'Tap to type',
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .headline5
-                                          ?.copyWith(
-                                            color: Theme.of(context)
-                                                .textTheme
-                                                .headline5
-                                                ?.color
-                                                ?.withOpacity(0.4),
-                                          ),
-                                    ),
+                                child: Center(
+                                  child: Text(
+                                    'Tap to type',
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .headline5
+                                        ?.copyWith(
+                                          color: Theme.of(context)
+                                              .textTheme
+                                              .headline5
+                                              ?.color
+                                              ?.withOpacity(0.4),
+                                        ),
                                   ),
                                 ),
-                              ...stackData
-                                  .where((item) => item.type != ItemType.GIF)
-                                  .map(_buildItemWidget),
-                            ],
-                          );
-                        },
-                      ),
+                              ),
+                            ...stackData
+                                .where((item) => item.type != ItemType.GIF)
+                                .map(_buildItemWidget),
+                          ],
+                        );
+                      },
                     ),
                   ),
                   CenteredStack(
