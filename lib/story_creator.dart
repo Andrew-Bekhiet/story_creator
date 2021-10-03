@@ -1,8 +1,11 @@
 library story_creator;
 
+import 'dart:async';
 import 'dart:io';
 import 'dart:typed_data';
 
+import 'package:flutter/gestures.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
@@ -10,18 +13,26 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_colorpicker/flutter_colorpicker.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 import 'dart:ui' as ui;
+
+import 'centered_stack.dart';
 
 class StoryCreator extends StatefulWidget {
   StoryCreator({
     Key? key,
     this.filePath,
     this.bgColor,
-  }) : super(key: key);
+    this.showGIFPicker = false,
+    this.onAddGIF,
+  })  : assert(!showGIFPicker || onAddGIF != null),
+        super(key: key);
 
   final String? filePath;
   final Color? bgColor;
+  final bool showGIFPicker;
+  final FutureOr<EditableItem?> Function(BuildContext)? onAddGIF;
 
   @override
   _StoryCreatorState createState() => _StoryCreatorState();
@@ -48,11 +59,13 @@ class _StoryCreatorState extends State<StoryCreator> {
 
   final ValueNotifier<EditableItem?> _activeItem = ValueNotifier(null);
 
-  Offset? initialPostition;
+  final ValueNotifier<bool> isOnDelete = ValueNotifier(false);
+
+  Size? stackSize;
+
+  Offset? initialPosition;
   double? initialScale;
   double? initialRotation;
-
-  final ValueNotifier<bool> isOnDelete = ValueNotifier(false);
 
   @override
   void initState() {
@@ -61,191 +74,375 @@ class _StoryCreatorState extends State<StoryCreator> {
     bgColor.value = widget.bgColor;
 
     if (stackData.isEmpty && widget.filePath != null)
-      stackData.add(EditableItem(
-        type: ItemType.Image,
-        value: widget.filePath,
-        position: Offset(0.5, 0.5),
-      ));
+      WidgetsBinding.instance!.addPostFrameCallback((_) {
+        stackData.add(EditableItem(
+          type: ItemType.Image,
+          value: widget.filePath,
+          position: Alignment.center.alongSize(stackSize!),
+        ));
+        setState(() {});
+      });
   }
 
   @override
   Widget build(BuildContext context) {
     return ValueListenableBuilder<Color?>(
       valueListenable: bgColor,
-      child: GestureDetector(
-        onScaleStart: (details) {
-          if (_activeItem.value == null) return;
+      child: Builder(
+        builder: (context) {
+          return SafeArea(
+            child: GestureDetector(
+              onScaleStart: (details) {
+                if (_activeItem.value == null) return;
 
-          initialPostition = _activeItem.value!.position.value;
-          initialScale = _activeItem.value!.scale.value;
-          initialRotation = _activeItem.value!.rotation.value;
-        },
-        onScaleUpdate: (details) {
-          if (_activeItem.value == null ||
-              initialPostition == null ||
-              initialScale == null ||
-              initialRotation == null) return;
+                initialPosition = _activeItem.value!.position.value;
+                initialScale = _activeItem.value!.scale.value;
+                initialRotation = _activeItem.value!.rotation.value;
+              },
+              onScaleUpdate: (details) {
+                if (_activeItem.value == null ||
+                    initialPosition == null ||
+                    initialScale == null ||
+                    initialRotation == null) return;
 
-          final delta = details.delta;
-          final left = delta.dx / MediaQuery.of(context).size.width;
-          final top = delta.dy / MediaQuery.of(context).size.height;
+                final delta = (previewContainer.currentContext!
+                        .findRenderObject() as RenderBox)
+                    .globalToLocal(details.delta);
+                final left = delta.dx;
+                final top = delta.dy;
 
-          _activeItem.value!.position.value =
-              Offset(left, top) + initialPostition!;
-          _activeItem.value!.rotation.value =
-              details.rotation + initialRotation!;
-          _activeItem.value!.scale.value = details.scale * initialScale!;
-        },
-        child: Stack(
-          children: [
-            SafeArea(
-              child: RepaintBoundary(
-                key: previewContainer,
-                child: Stack(
-                  alignment: Alignment.center,
-                  children: [
-                    GestureDetector(
-                      onTap: _editOrAddItem,
-                    ),
-                    if (stackData.isEmpty)
-                      GestureDetector(
-                        onTap: _editOrAddItem,
-                        child: Center(
-                          child: Text(
-                            'Tap to type',
-                            style:
-                                Theme.of(context).textTheme.headline5?.copyWith(
-                                      color: Theme.of(context)
+                _activeItem.value!.position.value =
+                    Offset(left, top) + initialPosition!;
+                _activeItem.value!.rotation.value =
+                    details.rotation + initialRotation!;
+                _activeItem.value!.scale.value = details.scale * initialScale!;
+              },
+              child: Stack(
+                children: [
+                  RepaintBoundary(
+                    key: previewContainer,
+                    child: ValueListenableBuilder<Color?>(
+                      valueListenable: bgColor,
+                      builder: (context, bgColor, child) =>
+                          Container(color: bgColor, child: child),
+                      child: LayoutBuilder(
+                        builder: (context, constraints) {
+                          stackSize = constraints.biggest;
+
+                          return CenteredStack(
+                            alignment: Alignment.center,
+                            children: [
+                              GestureDetector(
+                                onTap: _editOrAddItem,
+                              ),
+                              if (stackData.isEmpty)
+                                GestureDetector(
+                                  onTap: _editOrAddItem,
+                                  child: Center(
+                                    child: Text(
+                                      'Tap to type',
+                                      style: Theme.of(context)
                                           .textTheme
                                           .headline5
-                                          ?.color
-                                          ?.withOpacity(0.4),
+                                          ?.copyWith(
+                                            color: Theme.of(context)
+                                                .textTheme
+                                                .headline5
+                                                ?.color
+                                                ?.withOpacity(0.4),
+                                          ),
                                     ),
+                                  ),
+                                ),
+                              ...stackData
+                                  .where((item) => item.type != ItemType.GIF)
+                                  .map(_buildItemWidget),
+                            ],
+                          );
+                        },
+                      ),
+                    ),
+                  ),
+                  Stack(
+                    alignment: Alignment.center,
+                    children: stackData
+                        .where((item) => item.type == ItemType.GIF)
+                        .map(_buildItemWidget)
+                        .toList(),
+                  ),
+                  Positioned(
+                    top: 40,
+                    left: 20,
+                    child: IconButton(
+                      icon: Icon(
+                        Icons.color_lens,
+                        color: Colors.white,
+                        size: 33,
+                      ),
+                      onPressed: () async {
+                        final rslt = await _pickColor(
+                          bgColor.value ??
+                              Theme.of(context).textTheme.headline5?.color ??
+                              Colors.white,
+                        );
+                        if (rslt != null) bgColor.value = rslt;
+                      },
+                    ),
+                  ),
+                  Positioned(
+                    top: 40,
+                    left: 65,
+                    child: IconButton(
+                      icon: Icon(
+                        Icons.add_photo_alternate,
+                        color: Colors.white,
+                        size: 33,
+                      ),
+                      onPressed: () async {
+                        showBottomSheet(
+                          context: context,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.vertical(
+                              top: Radius.circular(35),
+                            ),
+                          ),
+                          builder: (context) => Container(
+                            padding: EdgeInsets.all(12),
+                            height: 120,
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.center,
+                              mainAxisAlignment: MainAxisAlignment.spaceAround,
+                              children: [
+                                InkWell(
+                                  onTap: () async {
+                                    if (!(await Permission.storage.request())
+                                        .isGranted) {
+                                      return;
+                                    }
+
+                                    final selectedImage = await ImagePicker()
+                                        .pickImage(source: ImageSource.gallery);
+                                    if (selectedImage == null) return;
+
+                                    setState(
+                                      () => stackData.add(EditableItem(
+                                        type: ItemType.Image,
+                                        value: selectedImage.path,
+                                        position: Alignment.center
+                                            .alongSize(stackSize!),
+                                      )),
+                                    );
+                                    Navigator.of(context).pop();
+                                  },
+                                  child: SizedBox(
+                                    width:
+                                        MediaQuery.of(context).size.width / 4,
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.center,
+                                      children: [
+                                        Icon(
+                                          Icons.photo_library,
+                                          size: 40,
+                                        ),
+                                        SizedBox(height: 3),
+                                        Text(
+                                          'Photo from gallery',
+                                          textAlign: TextAlign.center,
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                                InkWell(
+                                  onTap: () async {
+                                    if (!(await Permission.camera.request())
+                                        .isGranted) {
+                                      return;
+                                    }
+
+                                    final selectedImage = await ImagePicker()
+                                        .pickImage(source: ImageSource.camera);
+                                    if (selectedImage == null) return;
+
+                                    setState(
+                                      () => stackData.add(EditableItem(
+                                          type: ItemType.Image,
+                                          value: selectedImage.path,
+                                          position: Alignment.center
+                                              .alongSize(stackSize!))),
+                                    );
+                                    Navigator.of(context).pop();
+                                  },
+                                  child: SizedBox(
+                                    width:
+                                        MediaQuery.of(context).size.width / 4,
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.center,
+                                      children: [
+                                        Icon(
+                                          Icons.camera,
+                                          size: 40,
+                                        ),
+                                        SizedBox(height: 3),
+                                        Text(
+                                          'Photo from camera',
+                                          textAlign: TextAlign.center,
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                                if (widget.showGIFPicker)
+                                  InkWell(
+                                    onTap: () async {
+                                      final item =
+                                          await widget.onAddGIF?.call(context);
+                                      if (item != null)
+                                        setState(() => stackData.add(item));
+                                    },
+                                    child: SizedBox(
+                                      width:
+                                          MediaQuery.of(context).size.width / 4,
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.center,
+                                        children: [
+                                          Icon(
+                                            Icons.gif,
+                                            size: 40,
+                                          ),
+                                          SizedBox(height: 3),
+                                          Text(
+                                            'GIF',
+                                            textAlign: TextAlign.center,
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  )
+                              ],
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                  ValueListenableBuilder<EditableItem?>(
+                    valueListenable: _activeItem,
+                    child: Positioned(
+                      bottom: 20,
+                      right: 20,
+                      child: TextButton(
+                        onPressed: () async {
+                          //done: save image and return captured image to previous screen
+
+                          final RenderRepaintBoundary boundary =
+                              previewContainer.currentContext!
+                                  .findRenderObject() as RenderRepaintBoundary;
+
+                          final ui.Image image = await boundary.toImage(
+                            pixelRatio: 2.0,
+                          );
+
+                          final directory =
+                              (await getTemporaryDirectory()).path;
+
+                          final ByteData? byteData = await image.toByteData(
+                            format: ui.ImageByteFormat.png,
+                          );
+
+                          final Uint8List pngBytes =
+                              byteData!.buffer.asUint8List();
+
+                          final storyResult = Story(
+                            image: await File(
+                              '$directory/' +
+                                  DateTime.now().toString() +
+                                  '.png',
+                            ).writeAsBytes(pngBytes),
+                            gifs: stackData
+                                .where((i) => i.type == ItemType.GIF)
+                                .map(
+                                  (gif) => GIFProperties._fromEditableItem(
+                                      gif, MediaQuery.of(context).size),
+                                )
+                                .toList(),
+                          );
+
+                          // done: return imgFile
+                          Navigator.of(context).pop(storyResult);
+                        },
+                        style: ButtonStyle(
+                          shape: MaterialStateProperty.all(
+                            RoundedRectangleBorder(
+                              borderRadius: BorderRadius.all(
+                                Radius.circular(10),
+                              ),
+                            ),
+                          ),
+                          backgroundColor: MaterialStateProperty.all(
+                            Colors.black.withOpacity(0.7),
                           ),
                         ),
-                      ),
-                    ...stackData.map(_buildItemWidget),
-                  ],
-                ),
-              ),
-            ),
-            Positioned(
-              top: 40,
-              left: 20,
-              child: IconButton(
-                icon: Icon(
-                  Icons.color_lens,
-                  color: Colors.white,
-                  size: 33,
-                ),
-                onPressed: () async {
-                  final rslt = await _pickColor(
-                    bgColor.value ??
-                        Theme.of(context).textTheme.headline5?.color ??
-                        Colors.white,
-                  );
-                  if (rslt != null) bgColor.value = rslt;
-                },
-              ),
-            ),
-            ValueListenableBuilder<EditableItem?>(
-              valueListenable: _activeItem,
-              child: Positioned(
-                bottom: 20,
-                right: 20,
-                child: TextButton(
-                  onPressed: () async {
-                    //done: save image and return captured image to previous screen
-
-                    RenderRepaintBoundary boundary =
-                        previewContainer.currentContext!.findRenderObject()
-                            as RenderRepaintBoundary;
-                    ui.Image image = await boundary.toImage(
-                      pixelRatio: 2.0,
-                    );
-                    final directory = (await getTemporaryDirectory()).path;
-                    ByteData? byteData = await image.toByteData(
-                      format: ui.ImageByteFormat.png,
-                    );
-                    Uint8List pngBytes = byteData!.buffer.asUint8List();
-                    // print(pngBytes);
-
-                    File imgFile = File(
-                        '$directory/' + DateTime.now().toString() + '.png');
-                    imgFile.writeAsBytes(pngBytes).then((value) {
-                      // done: return imgFile
-                      Navigator.of(context).pop(imgFile);
-                    });
-                  },
-                  style: ButtonStyle(
-                    shape: MaterialStateProperty.all(
-                      RoundedRectangleBorder(
-                        borderRadius: BorderRadius.all(
-                          Radius.circular(10),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text(
+                              'Done',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 18,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ),
-                    backgroundColor: MaterialStateProperty.all(
-                      Colors.black.withOpacity(0.7),
+                    builder: (context, activeItem, child) => Visibility(
+                      visible: activeItem == null && stackData.isNotEmpty,
+                      child: child!,
                     ),
                   ),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(
-                        'Done',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 18,
-                        ),
+                  ValueListenableBuilder<EditableItem?>(
+                    valueListenable: _activeItem,
+                    child: Align(
+                      alignment: Alignment(0, 0.95),
+                      child: ValueListenableBuilder<bool>(
+                        valueListenable: isOnDelete,
+                        builder: (context, isOnDelete, _) {
+                          return Container(
+                            height: !isOnDelete ? 60.0 : 100,
+                            width: !isOnDelete ? 60.0 : 100,
+                            decoration: BoxDecoration(
+                              color: Colors.black.withOpacity(0.5),
+                              borderRadius: BorderRadius.all(
+                                Radius.circular(!isOnDelete ? 30 : 50),
+                              ),
+                            ),
+                            child: Icon(
+                              Icons.delete,
+                              color: Colors.white,
+                              size: !isOnDelete ? 30 : 50,
+                            ),
+                          );
+                        },
                       ),
-                    ],
-                  ),
-                ),
-              ),
-              builder: (context, activeItem, child) => Visibility(
-                visible: activeItem == null && stackData.isNotEmpty,
-                child: child!,
-              ),
-            ),
-            ValueListenableBuilder<EditableItem?>(
-              valueListenable: _activeItem,
-              child: Positioned(
-                bottom: MediaQuery.of(context).size.height * 0.02,
-                width: MediaQuery.of(context).size.width,
-                child: Center(
-                  child: ValueListenableBuilder<bool>(
-                    valueListenable: isOnDelete,
-                    builder: (context, isOnDelete, _) {
-                      return Container(
-                        height: !isOnDelete ? 60.0 : 100,
-                        width: !isOnDelete ? 60.0 : 100,
-                        decoration: BoxDecoration(
-                          color: Colors.black.withOpacity(0.5),
-                          borderRadius: BorderRadius.all(
-                            Radius.circular(!isOnDelete ? 30 : 50),
-                          ),
-                        ),
-                        child: Icon(
-                          Icons.delete,
-                          color: Colors.white,
-                          size: !isOnDelete ? 30 : 50,
-                        ),
+                    ),
+                    builder: (context, activeItem, child) {
+                      return Visibility(
+                        visible: activeItem != null,
+                        child: child!,
                       );
                     },
                   ),
-                ),
+                ],
               ),
-              builder: (context, activeItem, child) {
-                return Visibility(
-                  visible: activeItem != null,
-                  child: child!,
-                );
-              },
             ),
-          ],
-        ),
+          );
+        },
       ),
       builder: (context, bgColor, body) {
         return Scaffold(
@@ -258,7 +455,11 @@ class _StoryCreatorState extends State<StoryCreator> {
   }
 
   void _editOrAddItem([EditableItem? activeItem]) async {
-    final item = activeItem?.copy() ?? EditableItem(type: ItemType.Text);
+    final item = activeItem?.copy() ??
+        EditableItem(
+          type: ItemType.Text,
+          position: Alignment.center.alongSize(stackSize!),
+        );
     final TextEditingController itemTextController =
         TextEditingController(text: item.value.value);
 
@@ -383,8 +584,8 @@ class _StoryCreatorState extends State<StoryCreator> {
                             decoration: textStyle != 0
                                 ? BoxDecoration(
                                     color: textStyle == 1
-                                        ? Colors.black.withOpacity(1.0)
-                                        : Colors.white.withOpacity(1.0),
+                                        ? Colors.black
+                                        : Colors.white,
                                     borderRadius: BorderRadius.all(
                                       Radius.circular(4),
                                     ),
@@ -537,8 +738,6 @@ class _StoryCreatorState extends State<StoryCreator> {
   }
 
   Widget _buildItemWidget(EditableItem e) {
-    final screen = MediaQuery.of(context).size;
-
     late Widget widget;
 
     switch (e.type) {
@@ -560,7 +759,7 @@ class _StoryCreatorState extends State<StoryCreator> {
           widget = Container(
             padding: EdgeInsets.only(left: 7, right: 7, top: 5, bottom: 5),
             decoration: BoxDecoration(
-              color: Colors.black.withOpacity(1.0),
+              color: e.textStyle.value == 1 ? Colors.black : Colors.white,
               borderRadius: BorderRadius.all(
                 Radius.circular(4),
               ),
@@ -571,8 +770,12 @@ class _StoryCreatorState extends State<StoryCreator> {
         break;
       case ItemType.Image:
         widget = Image.file(
-          File(stackData[0].value.value!),
-          // fit: BoxFit.fitHeight,
+          File(e.value.value!),
+        );
+        break;
+      case ItemType.GIF:
+        widget = Image.network(
+          e.value.value!,
         );
         break;
     }
@@ -586,12 +789,12 @@ class _StoryCreatorState extends State<StoryCreator> {
             key: e.key,
             constraints: BoxConstraints.loose(MediaQuery.of(context).size),
             child: GestureDetector(
-              onTap: () => _editOrAddItem(e),
+              onTap: e.type != ItemType.GIF ? () => _editOrAddItem(e) : null,
               child: Listener(
                 onPointerDown: (details) {
                   _activeItem.value = e;
 
-                  initialPostition = details.position;
+                  initialPosition = details.position;
                   initialScale = e.scale.value;
                   initialRotation = e.rotation.value;
                 },
@@ -602,11 +805,17 @@ class _StoryCreatorState extends State<StoryCreator> {
                   }
                   _activeItem.value = null;
                 },
-                onPointerCancel: (details) {},
                 onPointerMove: (details) {
-                  if (e.position.value.dy >= 0.88 &&
-                      e.position.value.dx >= 0.45 &&
-                      e.position.value.dx <= 0.55) {
+                  final double centerX = (stackSize! / 2).width;
+                  final double centerY = (stackSize! / 2).height;
+
+                  final Alignment relativePosition = Alignment(
+                      (e.position.value.dx - centerX) / centerX,
+                      (e.position.value.dy - centerY) / centerY);
+
+                  if (relativePosition.y >= 0.73 &&
+                      relativePosition.x >= -0.33 &&
+                      relativePosition.x <= 0.33) {
                     isOnDelete.value = true;
                   } else {
                     isOnDelete.value = false;
@@ -634,22 +843,8 @@ class _StoryCreatorState extends State<StoryCreator> {
           );
 
         return Positioned(
-          top: (position.dy * screen.height) -
-              ((e.key.currentContext
-                          ?.findRenderObject()
-                          ?.paintBounds
-                          .size
-                          .height ??
-                      screen.height) /
-                  2),
-          left: (position.dx * screen.width) -
-              ((e.key.currentContext
-                          ?.findRenderObject()
-                          ?.paintBounds
-                          .size
-                          .width ??
-                      screen.width) /
-                  2),
+          top: position.dy,
+          left: position.dx,
           child: child!,
         );
       },
@@ -685,7 +880,7 @@ class _StoryCreatorState extends State<StoryCreator> {
   }
 }
 
-enum ItemType { Image, Text }
+enum ItemType { Image, GIF, Text }
 
 class EditableItem {
   final ItemType type;
@@ -702,7 +897,7 @@ class EditableItem {
   EditableItem({
     required this.type,
     GlobalKey? key,
-    Offset position = const Offset(0.5, 0.5),
+    required Offset position,
     double scale = 1,
     double rotation = 0,
     String? value,
@@ -734,4 +929,42 @@ class EditableItem {
       fontFamily: fontFamily.value,
     );
   }
+}
+
+class GIFProperties {
+  String url;
+  Offset position;
+  double scale;
+  double rotation;
+
+  GIFProperties({
+    required this.url,
+    this.position = const Offset(0.5, 0.5),
+    this.scale = 1,
+    this.rotation = 0,
+  });
+
+  factory GIFProperties._fromEditableItem(EditableItem item, Size screen) {
+    return GIFProperties(
+      url: item.value.value!,
+      position: item.position.value,
+      rotation: item.rotation.value,
+      scale: item.scale.value,
+    );
+  }
+}
+
+class Story {
+  /// The combined photo of all static text and images
+  File image;
+
+  /// List of gifs and their position, rotation and scale
+  List<GIFProperties> gifs;
+
+  Story({required this.image, required this.gifs});
+}
+
+T dump<T>(T obj, [String label = 'dump']) {
+  print(label + ': ' + obj.toString());
+  return obj;
 }
