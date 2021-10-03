@@ -4,6 +4,7 @@ import 'dart:async';
 import 'dart:io';
 import 'dart:typed_data';
 
+import 'package:extended_image/extended_image.dart';
 import 'package:flutter/gestures.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:flutter/cupertino.dart';
@@ -26,6 +27,8 @@ class StoryCreator extends StatefulWidget {
     this.bgColor,
     this.showGIFPicker = false,
     this.onAddGIF,
+    this.gifImageProvider = _defaultGIFImageProvider,
+    this.fileImageProvider = _defaultFileImageProvider,
   })  : assert(!showGIFPicker || onAddGIF != null),
         super(key: key);
 
@@ -33,6 +36,20 @@ class StoryCreator extends StatefulWidget {
   final Color? bgColor;
   final bool showGIFPicker;
   final FutureOr<EditableItem?> Function(BuildContext)? onAddGIF;
+  final ImageProvider Function(String) gifImageProvider;
+  final ImageProvider Function(String) fileImageProvider;
+
+  static ExtendedNetworkImageProvider _defaultGIFImageProvider(String url) {
+    return ExtendedNetworkImageProvider(
+      url,
+      cache: true,
+      headers: {'accept': 'image/*'},
+    );
+  }
+
+  static ExtendedFileImageProvider _defaultFileImageProvider(String path) {
+    return ExtendedFileImageProvider(File(path));
+  }
 
   @override
   _StoryCreatorState createState() => _StoryCreatorState();
@@ -207,7 +224,7 @@ class _StoryCreatorState extends State<StoryCreator> {
                         size: 33,
                       ),
                       onPressed: () async {
-                        showBottomSheet(
+                        showModalBottomSheet(
                           context: context,
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.vertical(
@@ -307,8 +324,10 @@ class _StoryCreatorState extends State<StoryCreator> {
                                     onTap: () async {
                                       final item =
                                           await widget.onAddGIF?.call(context);
-                                      if (item != null)
+                                      if (item != null) {
                                         setState(() => stackData.add(item));
+                                        Navigator.of(context).pop();
+                                      }
                                     },
                                     child: SizedBox(
                                       width:
@@ -776,13 +795,13 @@ class _StoryCreatorState extends State<StoryCreator> {
         }
         break;
       case ItemType.Image:
-        widget = Image.file(
-          File(e.value.value!),
+        widget = Image(
+          image: this.widget.fileImageProvider(e.value.value!),
         );
         break;
       case ItemType.GIF:
-        widget = Image.network(
-          e.value.value!,
+        widget = Image(
+          image: this.widget.gifImageProvider(e.value.value!),
         );
         break;
     }
