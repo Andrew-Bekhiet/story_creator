@@ -163,7 +163,7 @@ class _StoryCreatorState extends State<StoryCreator> {
                       ),
                     ),
                   ),
-                  Stack(
+                  CenteredStack(
                     alignment: Alignment.center,
                     children: stackData
                         .where((item) => item.type == ItemType.GIF)
@@ -363,10 +363,11 @@ class _StoryCreatorState extends State<StoryCreator> {
                                   '.png',
                             ).writeAsBytes(pngBytes),
                             gifs: stackData
-                                .where((i) => i.type == ItemType.GIF)
+                                .where((i) =>
+                                    i.type == ItemType.GIF ||
+                                    i.type == ItemType.Image)
                                 .map(
-                                  (gif) => GIFProperties._fromEditableItem(
-                                      gif, MediaQuery.of(context).size),
+                                  (gif) => GIFProperties._fromEditableItem(gif),
                                 )
                                 .toList(),
                           );
@@ -836,12 +837,6 @@ class _StoryCreatorState extends State<StoryCreator> {
         ),
       ),
       builder: (context, position, child) {
-        if (e.key.currentContext == null)
-          return Align(
-            alignment: Alignment.center,
-            child: child!,
-          );
-
         return Positioned(
           top: position.dy,
           left: position.dx,
@@ -944,7 +939,7 @@ class GIFProperties {
     this.rotation = 0,
   });
 
-  factory GIFProperties._fromEditableItem(EditableItem item, Size screen) {
+  factory GIFProperties._fromEditableItem(EditableItem item) {
     return GIFProperties(
       url: item.value.value!,
       position: item.position.value,
@@ -962,9 +957,4 @@ class Story {
   List<GIFProperties> gifs;
 
   Story({required this.image, required this.gifs});
-}
-
-T dump<T>(T obj, [String label = 'dump']) {
-  print(label + ': ' + obj.toString());
-  return obj;
 }

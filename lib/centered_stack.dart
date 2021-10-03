@@ -4,7 +4,7 @@ import 'package:flutter/rendering.dart';
 
 class CenteredStack extends MultiChildRenderObjectWidget {
   /// Creates a stack layout widget simillar to flutter's Stack,
-  ///  but positions its childs from the center instead of top-left
+  ///  but positions its children from the center instead of top-left
   CenteredStack({
     Key? key,
     this.alignment = AlignmentDirectional.topStart,
