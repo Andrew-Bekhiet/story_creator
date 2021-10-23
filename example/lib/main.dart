@@ -30,7 +30,7 @@ class _MyAppState extends State<MyApp> {
       ),
       body: SingleChildScrollView(
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             if (story != null)
               CenteredStack(
