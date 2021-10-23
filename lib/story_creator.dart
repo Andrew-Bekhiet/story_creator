@@ -4,6 +4,7 @@ import 'dart:async';
 import 'dart:io';
 import 'dart:typed_data';
 
+import 'package:decorated_icon/decorated_icon.dart';
 import 'package:extended_image/extended_image.dart';
 import 'package:flutter/gestures.dart';
 import 'package:image_picker/image_picker.dart';
@@ -197,13 +198,20 @@ class _StoryCreatorState extends State<StoryCreator> {
                         .toList(),
                   ),
                   Positioned(
-                    top: 40,
+                    top: 20,
                     left: 20,
                     child: IconButton(
-                      icon: Icon(
+                      iconSize: 25,
+                      padding: EdgeInsets.zero,
+                      icon: DecoratedIcon(
                         Icons.color_lens,
                         color: Colors.white,
-                        size: 33,
+                        shadows: [
+                          BoxShadow(
+                            color: Colors.black54,
+                            blurRadius: 20,
+                          ),
+                        ],
                       ),
                       onPressed: () async {
                         final rslt = await _pickColor(
@@ -216,13 +224,20 @@ class _StoryCreatorState extends State<StoryCreator> {
                     ),
                   ),
                   Positioned(
-                    top: 40,
+                    top: 20,
                     left: 65,
                     child: IconButton(
-                      icon: Icon(
+                      iconSize: 25,
+                      padding: EdgeInsets.zero,
+                      icon: DecoratedIcon(
                         Icons.add_photo_alternate,
                         color: Colors.white,
-                        size: 33,
+                        shadows: [
+                          BoxShadow(
+                            color: Colors.black54,
+                            blurRadius: 20,
+                          ),
+                        ],
                       ),
                       onPressed: () async {
                         showModalBottomSheet(
