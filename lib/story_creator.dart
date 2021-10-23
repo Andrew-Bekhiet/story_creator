@@ -197,179 +197,147 @@ class _StoryCreatorState extends State<StoryCreator> {
                         .map(_buildItemWidget)
                         .toList(),
                   ),
-                  Positioned(
-                    top: 20,
-                    left: 20,
-                    child: IconButton(
-                      iconSize: 25,
-                      padding: EdgeInsets.zero,
-                      icon: DecoratedIcon(
-                        Icons.color_lens,
-                        color: Colors.white,
-                        shadows: [
-                          BoxShadow(
-                            color: Colors.black54,
-                            blurRadius: 20,
+                  Align(
+                    alignment: Alignment(0, -0.97),
+                    child: Row(
+                      children: [
+                        IconButton(
+                          iconSize: (IconTheme.of(context).size ?? 20) + 5,
+                          padding: EdgeInsets.zero,
+                          icon: DecoratedIcon(
+                            Icons.color_lens,
+                            color: Colors.white,
+                            shadows: [
+                              BoxShadow(
+                                color: Colors.black54,
+                                blurRadius:
+                                    ((IconTheme.of(context).size ?? 20) / 4) +
+                                        1,
+                              ),
+                            ],
                           ),
-                        ],
-                      ),
-                      onPressed: () async {
-                        final rslt = await _pickColor(
-                          bgColor.value ??
-                              Theme.of(context).textTheme.headline5?.color ??
-                              Colors.white,
-                        );
-                        if (rslt != null) bgColor.value = rslt;
-                      },
-                    ),
-                  ),
-                  Positioned(
-                    top: 20,
-                    left: 65,
-                    child: IconButton(
-                      iconSize: 25,
-                      padding: EdgeInsets.zero,
-                      icon: DecoratedIcon(
-                        Icons.add_photo_alternate,
-                        color: Colors.white,
-                        shadows: [
-                          BoxShadow(
-                            color: Colors.black54,
-                            blurRadius: 20,
+                          onPressed: () async {
+                            final rslt = await _pickColor(
+                              bgColor.value ??
+                                  Theme.of(context)
+                                      .textTheme
+                                      .headline5
+                                      ?.color ??
+                                  Colors.white,
+                            );
+                            if (rslt != null) bgColor.value = rslt;
+                          },
+                        ),
+                        IconButton(
+                          iconSize: (IconTheme.of(context).size ?? 20) + 5,
+                          padding: EdgeInsets.zero,
+                          icon: DecoratedIcon(
+                            Icons.format_size,
+                            color: Colors.white,
+                            shadows: [
+                              BoxShadow(
+                                color: Colors.black54,
+                                blurRadius:
+                                    ((IconTheme.of(context).size ?? 20) / 4) +
+                                        1,
+                              ),
+                            ],
                           ),
-                        ],
-                      ),
-                      onPressed: () async {
-                        showModalBottomSheet(
-                          context: context,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.vertical(
-                              top: Radius.circular(35),
-                            ),
+                          onPressed: _editOrAddItem,
+                        ),
+                        IconButton(
+                          iconSize: (IconTheme.of(context).size ?? 20) + 5,
+                          padding: EdgeInsets.zero,
+                          icon: DecoratedIcon(
+                            Icons.add_photo_alternate,
+                            color: Colors.white,
+                            shadows: [
+                              BoxShadow(
+                                color: Colors.black54,
+                                blurRadius:
+                                    ((IconTheme.of(context).size ?? 20) / 4) +
+                                        1,
+                              ),
+                            ],
                           ),
-                          builder: (context) => Container(
-                            padding: EdgeInsets.all(12),
-                            height: 120,
-                            child: Row(
-                              crossAxisAlignment: CrossAxisAlignment.center,
-                              mainAxisAlignment: MainAxisAlignment.spaceAround,
-                              children: [
-                                InkWell(
-                                  onTap: () async {
-                                    if (!(await Permission.storage.request())
-                                        .isGranted) {
-                                      return;
-                                    }
+                          onPressed: () async {
+                            if (!(await Permission.storage.request())
+                                .isGranted) {
+                              return;
+                            }
 
-                                    final selectedImage = await ImagePicker()
-                                        .pickImage(source: ImageSource.gallery);
-                                    if (selectedImage == null) return;
+                            final selectedImage = await ImagePicker()
+                                .pickImage(source: ImageSource.gallery);
+                            if (selectedImage == null) return;
 
-                                    setState(
-                                      () => stackData.add(EditableItem(
-                                        type: ItemType.Image,
-                                        value: selectedImage.path,
-                                        position: Alignment.center
-                                            .alongSize(stackSize!),
-                                      )),
-                                    );
-                                    Navigator.of(context).pop();
-                                  },
-                                  child: SizedBox(
-                                    width:
-                                        MediaQuery.of(context).size.width / 4,
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.center,
-                                      children: [
-                                        Icon(
-                                          Icons.photo_library,
-                                          size: 40,
-                                        ),
-                                        SizedBox(height: 3),
-                                        Text(
-                                          'Photo from gallery',
-                                          textAlign: TextAlign.center,
-                                        ),
-                                      ],
-                                    ),
-                                  ),
+                            setState(
+                              () => stackData.add(EditableItem(
+                                type: ItemType.Image,
+                                value: selectedImage.path,
+                                position:
+                                    Alignment.center.alongSize(stackSize!),
+                              )),
+                            );
+                          },
+                        ),
+                        IconButton(
+                          iconSize: (IconTheme.of(context).size ?? 20) + 5,
+                          padding: EdgeInsets.zero,
+                          icon: DecoratedIcon(
+                            Icons.camera,
+                            color: Colors.white,
+                            shadows: [
+                              BoxShadow(
+                                color: Colors.black54,
+                                blurRadius:
+                                    ((IconTheme.of(context).size ?? 20) / 4) +
+                                        1,
+                              ),
+                            ],
+                          ),
+                          onPressed: () async {
+                            if (!(await Permission.camera.request())
+                                .isGranted) {
+                              return;
+                            }
+
+                            final selectedImage = await ImagePicker()
+                                .pickImage(source: ImageSource.camera);
+                            if (selectedImage == null) return;
+
+                            setState(
+                              () => stackData.add(EditableItem(
+                                  type: ItemType.Image,
+                                  value: selectedImage.path,
+                                  position:
+                                      Alignment.center.alongSize(stackSize!))),
+                            );
+                          },
+                        ),
+                        if (widget.showGIFPicker)
+                          IconButton(
+                            iconSize: (IconTheme.of(context).size ?? 20) + 5,
+                            padding: EdgeInsets.zero,
+                            icon: DecoratedIcon(
+                              Icons.gif,
+                              color: Colors.white,
+                              shadows: [
+                                BoxShadow(
+                                  color: Colors.black54,
+                                  blurRadius:
+                                      ((IconTheme.of(context).size ?? 20) / 4) +
+                                          1,
                                 ),
-                                InkWell(
-                                  onTap: () async {
-                                    if (!(await Permission.camera.request())
-                                        .isGranted) {
-                                      return;
-                                    }
-
-                                    final selectedImage = await ImagePicker()
-                                        .pickImage(source: ImageSource.camera);
-                                    if (selectedImage == null) return;
-
-                                    setState(
-                                      () => stackData.add(EditableItem(
-                                          type: ItemType.Image,
-                                          value: selectedImage.path,
-                                          position: Alignment.center
-                                              .alongSize(stackSize!))),
-                                    );
-                                    Navigator.of(context).pop();
-                                  },
-                                  child: SizedBox(
-                                    width:
-                                        MediaQuery.of(context).size.width / 4,
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.center,
-                                      children: [
-                                        Icon(
-                                          Icons.camera,
-                                          size: 40,
-                                        ),
-                                        SizedBox(height: 3),
-                                        Text(
-                                          'Photo from camera',
-                                          textAlign: TextAlign.center,
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ),
-                                if (widget.showGIFPicker)
-                                  InkWell(
-                                    onTap: () async {
-                                      final item =
-                                          await widget.onAddGIF?.call(context);
-                                      if (item != null) {
-                                        setState(() => stackData.add(item));
-                                        Navigator.of(context).pop();
-                                      }
-                                    },
-                                    child: SizedBox(
-                                      width:
-                                          MediaQuery.of(context).size.width / 4,
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.center,
-                                        children: [
-                                          Icon(
-                                            Icons.gif,
-                                            size: 40,
-                                          ),
-                                          SizedBox(height: 3),
-                                          Text(
-                                            'GIF',
-                                            textAlign: TextAlign.center,
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  )
                               ],
                             ),
+                            onPressed: () async {
+                              final item = await widget.onAddGIF?.call(context);
+                              if (item != null) {
+                                setState(() => stackData.add(item));
+                              }
+                            },
                           ),
-                        );
-                      },
+                      ],
                     ),
                   ),
                   ValueListenableBuilder<EditableItem?>(
