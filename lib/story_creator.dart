@@ -103,7 +103,8 @@ class _StoryCreatorState extends State<StoryCreator> {
   void didChangeDependencies() {
     super.didChangeDependencies();
 
-    bgColor.value = widget.bgColor ?? Theme.of(context).scaffoldBackgroundColor;
+    bgColor.value ??=
+        widget.bgColor ?? Theme.of(context).scaffoldBackgroundColor;
   }
 
   @override
