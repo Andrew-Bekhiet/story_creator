@@ -28,14 +28,18 @@ class StoryCreator extends StatefulWidget {
     this.bgColor,
     this.showGIFPicker = false,
     this.onAddGIF,
+    this.toolbarAlignment,
     this.gifImageProvider = _defaultGIFImageProvider,
     this.fileImageProvider = _defaultFileImageProvider,
+    this.toolbarMainAxisAlignment = MainAxisAlignment.start,
   })  : assert(!showGIFPicker || onAddGIF != null),
         super(key: key);
 
   final String? filePath;
   final Color? bgColor;
   final bool showGIFPicker;
+  final MainAxisAlignment toolbarMainAxisAlignment;
+  final AlignmentGeometry? toolbarAlignment;
   final FutureOr<EditableItem?> Function(BuildContext)? onAddGIF;
   final ImageProvider Function(String) gifImageProvider;
   final ImageProvider Function(String) fileImageProvider;
@@ -198,8 +202,9 @@ class _StoryCreatorState extends State<StoryCreator> {
                         .toList(),
                   ),
                   Align(
-                    alignment: Alignment(0, -0.97),
+                    alignment: widget.toolbarAlignment ?? Alignment(0, -0.97),
                     child: Row(
+                      mainAxisAlignment: widget.toolbarMainAxisAlignment,
                       children: [
                         IconButton(
                           iconSize: (IconTheme.of(context).size ?? 20) + 5,
@@ -245,6 +250,29 @@ class _StoryCreatorState extends State<StoryCreator> {
                           ),
                           onPressed: _editOrAddItem,
                         ),
+                        if (widget.showGIFPicker)
+                          IconButton(
+                            iconSize: (IconTheme.of(context).size ?? 20) + 5,
+                            padding: EdgeInsets.zero,
+                            icon: DecoratedIcon(
+                              Icons.gif,
+                              color: Colors.white,
+                              shadows: [
+                                BoxShadow(
+                                  color: Colors.black54,
+                                  blurRadius:
+                                      ((IconTheme.of(context).size ?? 20) / 4) +
+                                          1,
+                                ),
+                              ],
+                            ),
+                            onPressed: () async {
+                              final item = await widget.onAddGIF?.call(context);
+                              if (item != null) {
+                                setState(() => stackData.add(item));
+                              }
+                            },
+                          ),
                         IconButton(
                           iconSize: (IconTheme.of(context).size ?? 20) + 5,
                           padding: EdgeInsets.zero,
@@ -314,29 +342,6 @@ class _StoryCreatorState extends State<StoryCreator> {
                             );
                           },
                         ),
-                        if (widget.showGIFPicker)
-                          IconButton(
-                            iconSize: (IconTheme.of(context).size ?? 20) + 5,
-                            padding: EdgeInsets.zero,
-                            icon: DecoratedIcon(
-                              Icons.gif,
-                              color: Colors.white,
-                              shadows: [
-                                BoxShadow(
-                                  color: Colors.black54,
-                                  blurRadius:
-                                      ((IconTheme.of(context).size ?? 20) / 4) +
-                                          1,
-                                ),
-                              ],
-                            ),
-                            onPressed: () async {
-                              final item = await widget.onAddGIF?.call(context);
-                              if (item != null) {
-                                setState(() => stackData.add(item));
-                              }
-                            },
-                          ),
                       ],
                     ),
                   ),
