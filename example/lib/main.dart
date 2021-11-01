@@ -68,6 +68,8 @@ class _MyAppState extends State<MyApp> {
                   story = await Navigator.of(context).push(
                     MaterialPageRoute(
                       builder: (context) => StoryCreator(
+                        toolbarAlignment: Alignment.center,
+                        toolbarMainAxisAlignment: MainAxisAlignment.spaceAround,
                         filePath: file!.path,
                       ),
                     ),
@@ -87,6 +89,8 @@ class _MyAppState extends State<MyApp> {
                 story = await Navigator.of(context).push(
                   MaterialPageRoute(
                     builder: (context) => StoryCreator(
+                      toolbarAlignment: Alignment.topCenter,
+                      toolbarMainAxisAlignment: MainAxisAlignment.spaceAround,
                       bgColor: Colors.amber,
                     ),
                   ),
