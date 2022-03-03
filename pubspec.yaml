@@ -10,14 +10,14 @@ environment:
 
 dependencies:
   decorated_icon: ^1.2.1
-  extended_image: ^5.1.2
+  extended_image: ^6.0.1
   flutter:
     sdk: flutter
-  flutter_colorpicker: ^0.6.0
+  flutter_colorpicker: ^1.0.3
   google_fonts: ^2.1.0
   image_picker: ^0.8.4+2
   path_provider: ^2.0.5
-  permission_handler: ^8.1.6
+  permission_handler: ^9.1.0
 
 dev_dependencies:
   flutter_lints: ^1.0.4

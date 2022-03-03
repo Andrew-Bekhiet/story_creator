@@ -133,9 +133,7 @@ class _StoryCreatorState extends State<StoryCreator> {
                     initialScale == null ||
                     initialRotation == null) return;
 
-                final delta = (previewContainer.currentContext!
-                        .findRenderObject() as RenderBox)
-                    .globalToLocal(details.delta);
+                final delta = details.localFocalPoint - initialPosition!;
                 final left = delta.dx;
                 final top = delta.dy;
 
